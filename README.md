@@ -29,7 +29,7 @@ PC 负责摄像头、OpenCV 识别、目标生命周期、PySide6 GUI 和 TCP cl
 
 ## 当前状态
 
-- M1–M6 是已完成并保留的 PC 视觉、事件、GUI 和 Fake PLC 基线；M7–M12 已按 i.MX6ULL 控制器路线重新规划，尚未开始实现。
+- M1–M6 是已完成并保留的 PC 视觉、事件、GUI 和 Fake PLC 基线。i.MX6ULL Controller 路线的 M7 TCP 与 M8 FIFO/三级 Pipeline FSM 已完成实机网络验证；M9 实体三按键输入已 PASS，但输出与完整闭环仍为 DOING。
 - 10 张真实离线图片回归与两种机位下共 8 项 Insta360 实时摄像头验收均通过；实时证据见 `TEST-003` 和 `evidence/screenshots/m2/live/`。
 - 实时入口复用 M1 的设备选择和 `open_configured_camera`，没有复制第二套摄像头管理逻辑。
 - M3 已用 Insta360 对正常、较亮/侧光、较暗、部分遮挡和接触/粘连 5 个真实场景完成 Otsu / CLAHE+Otsu 同帧审计。前三种光照两种方法均完整识别三类；遮挡输出 `circle + unknown + triangle`，接触输出 `unknown + triangle`，失败样例已保留。默认方案继续使用更简单的 Otsu。
@@ -128,9 +128,9 @@ Development:
 | M4 | 防重复识别/事件生成 | DONE（PC 事件层真实生命周期已审计；不代表 PLC-002 整体完成） |
 | M5 | GUI 上位机 | DONE（真实 Insta360 GUI 性能、同步显示与正常关闭已审计） |
 | M6 | Fake PLC 模拟器 | DONE（纯软件模拟器验收；无真实 PLC） |
-| M7 | PC–Controller TCP 通信 | TODO |
-| M8 | FIFO 与三级流水线状态机 | TODO |
-| M9 | i.MX6ULL 部署与 GPIO | TODO |
+| M7 | PC–Controller TCP 通信 | DONE（真实 i.MX6ULL TCP smoke 10/10 PASS） |
+| M8 | FIFO 与三级流水线状态机 | DONE（FIFO/FSM 回归及实体按键闭环通过） |
+| M9 | i.MX6ULL 部署与 GPIO | DOING（实体 GPIO 输入 PASS；LED 输出与端到端闭环 TODO） |
 | M10 | Qt LCD HMI | TODO |
 | M11 | 可靠性机制（heartbeat、ACK、重试与状态反馈） | TODO |
 | M12 | 真实视觉到实体控制器闭环 | TODO |

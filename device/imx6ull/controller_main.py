@@ -15,7 +15,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from device.imx6ull.config import ControllerConfig, load_controller_config
-from device.imx6ull.core import GpioKeyInput, IKeyInput, KeyboardKeyInput
+from device.imx6ull.core import IKeyInput, KeyboardKeyInput, LinuxInputKeyInput
+from device.imx6ull.core.models import Key
 from device.imx6ull.core.controller import ControllerCore
 from device.imx6ull.network.tcp_server import DesktopControllerServer
 
@@ -31,7 +32,10 @@ def build_runtime(config: ControllerConfig, mode: str, host: str = "0.0.0.0") ->
     if mode == "desktop":
         key_input = KeyboardKeyInput()  # type: IKeyInput
     elif mode == "imx6ull":
-        key_input = GpioKeyInput(config.gpio.to_mapping())
+        key_input = LinuxInputKeyInput(
+            config.linux_input.device_name,
+            {code: Key(key) for code, key in config.linux_input.to_mapping().items()},
+        )
     else:
         raise ValueError("mode must be desktop or imx6ull")
     core = ControllerCore(capacity=config.fifo_capacity)
@@ -51,11 +55,19 @@ def main() -> int:
     runtime = build_runtime(load_controller_config(args.config), args.mode, args.host)
     runtime.server.start()
     host, port = runtime.server.address
-    print(f"controller mode={args.mode} listening on {host}:{port}")
-    print(f"key input status={runtime.key_input.poll().status.value}")
+    print(f"controller mode={args.mode} listening on {host}:{port}", flush=True)
+    print(f"key input status={runtime.key_input.poll().status.value}", flush=True)
     try:
         while True:
-            threading.Event().wait(3600)
+            result = runtime.server.core.process_key_input(runtime.key_input)
+            if result is not None:
+                print(
+                    "hardware key status={0} branch={1} queue_length={2}".format(
+                        result.status, result.branch, result.pipeline_state["queue_length"]
+                    ),
+                    flush=True,
+                )
+            threading.Event().wait(0.01)
     except KeyboardInterrupt:
         return 0
     finally:

@@ -1,6 +1,6 @@
 # PC–Controller TCP Protocol v1 (M7/M8)
 
-状态：M7/M8 Desktop Linux 联调协议。它定义 PC 视觉端与 i.MX6ULL 控制器核心之间的网络边界；定义 FIFO 和三级流水线的可观察结果，但不定义 GPIO、LCD 或 ARM 部署。
+状态：M7/M8 PC–Controller 协议已实现并完成 i.MX6ULL 实体网络 smoke。它定义 PC 视觉端与 i.MX6ULL 控制器核心之间的网络边界；定义 FIFO 和三级流水线的可观察结果，但不定义 GPIO 输出、LCD 或 ARM 部署。
 
 ## TCP framing
 
@@ -62,8 +62,8 @@
 
 PC client 在后台线程中连接、发送和接收。它等待带相同 `request_id` 的 `ack` 或 `error`：超时或断线时，以相同 `request_id` 与 `command_id` 有界重试；超过重试上限后 Future 失败。控制器以 `command_id` 检测重复 enqueue，因此重连后的重复发送仍是幂等的。
 
-`heartbeat` 的 ACK 只证明 TCP 对端已处理该消息；不声明 GPIO、LCD 或实体执行健康状态。M8 的 `pipeline_state` 包含内存 FIFO 与状态机快照；M9 以后才把按键抽象连接到 GPIO。
+`heartbeat` 的 ACK 只证明 TCP 对端已处理该消息；不声明 GPIO、LCD 或实体执行健康状态。M8 的 `pipeline_state` 包含内存 FIFO 与状态机快照。M9 已把实体按键输入接到该 FSM；GPIO/LED 输出仍未实现或验证。
 
 ## M4 / M6 compatibility
 
-M4 的 `VisionEvent` 仅有 `OBJECT_ENTER` 才应经 M6 `CommandAdapter` 转换成语义命令；`OBJECT_EXIT` 不发送 enqueue。M7/M8 保持 M6 的三种 shape、`command_id` 和重复语义，但以真实 localhost TCP、FIFO 和状态机替代 `InMemoryLink`。这不是对已有 M1–M6 结果或 PLC 历史的修改。
+M4 的 `VisionEvent` 仅有 `OBJECT_ENTER` 才应经 M6 `CommandAdapter` 转换成语义命令；`OBJECT_EXIT` 不发送 enqueue。M7/M8 保持 M6 的三种 shape、`command_id` 和重复语义，但以真实 TCP、FIFO 和状态机替代 `InMemoryLink`；TEST-008 的实体地址为 `198.51.100.2:9000`，不是 localhost。这不是对已有 M1–M6 结果或 PLC 历史的修改。

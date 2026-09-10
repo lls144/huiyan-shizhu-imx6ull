@@ -29,11 +29,44 @@ class GpioKeyConfig:
 
 
 @dataclass(frozen=True)
+class LinuxInputConfig:
+    """Stable Linux input identity and code mapping for the gpio-keys device."""
+
+    device_name: Optional[str]
+    key1_code: int
+    key2_code: int
+    key3_code: int
+
+    @classmethod
+    def from_dict(cls, value: object) -> "LinuxInputConfig":
+        if not isinstance(value, dict):
+            raise ValueError("linux_input must be an object")
+        device_name = value.get("device_name")
+        if device_name is not None and (not isinstance(device_name, str) or not device_name):
+            raise ValueError("linux_input.device_name must be a non-empty string or null")
+        codes = value.get("key_codes", {})
+        if not isinstance(codes, dict):
+            raise ValueError("linux_input.key_codes must be an object")
+        fields = {name: codes.get(name, default) for name, default in (("KEY1", 148), ("KEY2", 149), ("KEY3", 202))}
+        if set(codes) - set(fields):
+            raise ValueError("linux_input.key_codes must contain only KEY1, KEY2, and KEY3")
+        if any(type(code) is not int or code <= 0 for code in fields.values()):
+            raise ValueError("linux_input key codes must be positive integers")
+        if len(set(fields.values())) != 3:
+            raise ValueError("linux_input key codes must be distinct")
+        return cls(device_name, fields["KEY1"], fields["KEY2"], fields["KEY3"])
+
+    def to_mapping(self) -> Dict[int, str]:
+        return {self.key1_code: "KEY1", self.key2_code: "KEY2", self.key3_code: "KEY3"}
+
+
+@dataclass(frozen=True)
 class ControllerConfig:
     tcp_port: int
     fifo_capacity: int
     heartbeat_interval: int
     gpio: GpioKeyConfig
+    linux_input: LinuxInputConfig
 
     @classmethod
     def from_dict(cls, value: object) -> "ControllerConfig":
@@ -48,7 +81,13 @@ class ControllerConfig:
             raise ValueError("fifo_capacity must be a positive integer")
         if type(heartbeat_interval) is not int or heartbeat_interval <= 0:
             raise ValueError("heartbeat_interval must be a positive integer")
-        return cls(tcp_port, fifo_capacity, heartbeat_interval, GpioKeyConfig.from_dict(value.get("gpio")))
+        return cls(
+            tcp_port,
+            fifo_capacity,
+            heartbeat_interval,
+            GpioKeyConfig.from_dict(value.get("gpio")),
+            LinuxInputConfig.from_dict(value.get("linux_input", {})),
+        )
 
 
 def load_controller_config(path: Union[str, Path]) -> ControllerConfig:

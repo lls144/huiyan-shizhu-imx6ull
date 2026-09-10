@@ -91,6 +91,6 @@ normal_fifo、dequeue_order、queue_full、full_recovery、invalid_shape、dupli
 
 TEST-007：`notes/tests/TEST-007-M6-Fake-PLC模拟器验收.md`。JSON 含 source_type、Git HEAD/origin、dirty、Python、配置、源码哈希、expected/actual、passed、输入事件、步骤、最终状态、故障与 benchmark。核心结果两次运行逐字段相等；性能时间只作元数据。benchmark 250 轮共 1500 次显式操作，含发送、重复、消费、心跳、请求丢弃和时钟推进。
 
-M7 将以真实 transport + codec 替换 InMemoryLink，保留 command/response 语义边界；当前共享接口仍未冻结，不定义字节帧、地址、编码或物理协议。M8 仍需真实 PLC FIFO、按钮、LED、I/O、TIA 工程。M9 可复用故障计划，另行实现 heartbeat scheduler、retry、超时/满队列恢复与端到端去重。
+后续 i.MX6ULL Controller M7 已以真实 TCP transport + codec 替换 InMemoryLink，并保留 command/response 语义边界；当前共享 PLC 接口仍未冻结，不定义 PLC 字节帧、地址、编码或物理协议。i.MX6ULL Controller M8 FIFO/按键 FSM 已完成，但真实 PLC FIFO、按钮、LED、I/O、TIA 工程仍待完成。M9 可复用故障计划；实体 LED 输出、heartbeat scheduler、retry、超时/满队列恢复与端到端去重仍待验证。
 
 已知限制：单进程单线程测试模型；去重历史和事件日志在实例生命周期内无限保留，适用于有界测试，不宣称生产级容量；无持久化/掉电恢复、自动重发、真实电气/LED、网络或 PLC 扫描周期仿真；无 GUI 集成。M3/M4/M5 已于 2026-09-07 另用真实摄像头完成验收，但该结果与 M6 的纯离线结论相互独立。

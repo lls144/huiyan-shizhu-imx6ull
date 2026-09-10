@@ -63,23 +63,23 @@
 - **验收标准**：可脚本化重现正常、满队列、丢包/延迟和心跳中断场景；行为与协议草案一致。
 - **所需真实硬件**：无。
 - **是否可在宿舍完成**：是。
-- **当前状态**：DONE。2026-09-05 明确授权后完成协议无关模型、FIFO、设备侧重复保护、虚拟毫秒时钟、内存链路、确定性故障计划和 M4 实际事件集成。16/16 CLI 场景及逐字段重放通过，62 项 M6 测试、172 项全量测试通过。证据见 TEST-007、`evidence/data/m6/`。本阶段无真实硬件要求；结果只证明软件模拟语义，M7/M8/M9 仍 TODO，共享协议未冻结。
+- **当前状态**：DONE。2026-09-05 明确授权后完成协议无关模型、FIFO、设备侧重复保护、虚拟毫秒时钟、内存链路、确定性故障计划和 M4 实际事件集成。16/16 CLI 场景及逐字段重放通过，62 项 M6 测试、172 项全量测试通过。证据见 TEST-007、`evidence/data/m6/`。本阶段只证明软件模拟语义；后续 i.MX6ULL Controller M7/M8 已另行完成，M9 输出与共享 PLC 接口仍未完成。
 
-## M7 PC–Controller TCP 通信 — TODO
+## M7 PC–Controller TCP 通信 — DONE
 
 - **输入条件**：M4 语义事件模型、M6 的 command/response 语义，以及 i.MX6ULL 网络环境的设计约束。
 - **实现任务**：定义并实现 PC TCP client、i.MX6ULL TCP server 的消息边界、命令编码、ACK 和状态反馈；保留 M6 语义模型，不把内存链路当作真实网络。
 - **验收标准**：协议、时序和测试向量可审阅；三类语义命令与 ACK 能在 PC 和控制器间稳定收发。
 - **所需真实硬件**：设计与 PC 端测试可先使用本地替身；最终需 i.MX6ULL 以太网环境。
-- **当前状态**：TODO。
+- **当前状态**：DONE。协议实现为 `d97e0c9`，Controller/客户端回归已通过；2026-09-10 在真实野火 i.MX6ULL 的 `198.51.100.2:9000` 上完成 heartbeat、状态、三类 enqueue、FIFO full、duplicate、reset、顺序和 reconnect 共 10 项 smoke（TEST-008）。这只关闭 PC–Controller TCP 路线，不关闭真实 PLC 通信需求。
 
-## M8 FIFO 与三级流水线状态机 — TODO
+## M8 FIFO 与三级流水线状态机 — DONE
 
 - **输入条件**：M7 的已验证消息语义和控制器侧状态模型。
 - **实现任务**：实现容量、顺序、满/空边界明确的 FIFO，以及可观察的三级流水线状态机和分支控制逻辑。
 - **验收标准**：正常、满、空、重复指令和逐级流转均有可重复的单元/集成测试；状态转换与命令 ID 可追踪。
 - **所需真实硬件**：核心逻辑可先在主机测试；实体执行验证在后续 i.MX6ULL 阶段完成。
-- **当前状态**：TODO。
+- **当前状态**：DONE。实现为 `e47f27f`，覆盖容量/顺序、空满、duplicate、reset、三类路线与错误工位保持状态的回归全部通过；TEST-008 验证真实网络 FIFO，TEST-009 验证实体三按键进入同一 FSM 后完成 Branch1/2/3。实体输出不属于本里程碑结论，仍由 M9 完成。
 
 ## M9 i.MX6ULL Linux 部署与 GPIO — DOING
 
@@ -87,7 +87,7 @@
 - **实现任务**：部署控制器服务，接入 GPIO 按键和分支控制所需 I/O；记录 UART 调试、网络、引脚与构建环境。
 - **验收标准**：目标板可重复部署和运行；按键输入与 GPIO 输出有真实硬件记录，不把主机模拟结果标为板端验证。
 - **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
-- **当前状态**：DOING。2026-09-10 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` 监听以及 Ubuntu 经 USB Gadget Ethernet 到 `198.51.100.2:9000` 的 10 项 TCP smoke。GPIO mapping 仍全为 null 且没有访问未知 pin；物理按键/输出、接线和 GPIO 实机证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、`notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md`。
+- **当前状态**：DOING。2026-09-10 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` 监听以及 Ubuntu 经 USB Gadget Ethernet 到 `198.51.100.2:9000` 的 10 项 TCP smoke。实体 KEY1/2/3 已通过确认的 `gpiochip0` lines 24/25/26、`gpio-keys`、`huiyan-keys` Linux input 和 Controller FSM 验证；应用不硬编码 `eventX`。GPIO 输出/分支硬件、其接线和真实输出证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、`notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md` 与 `notes/tests/TEST-009-M9-iMX6ULL实体GPIO按键验收.md`。
 
 ## M10 Qt LCD HMI — TODO
 
