@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Dict, Optional, Set, Union
 
 from .fifo import FifoQueue
@@ -15,9 +16,11 @@ class ControllerCore:
         self.fifo = FifoQueue(capacity)
         self.pipeline = PipelineFSM(self.fifo)
         self._accepted_command_ids = set()  # type: Set[int]
+        self._lock = threading.RLock()
 
     def pipeline_state(self) -> Dict[str, object]:
-        return self.pipeline.snapshot()
+        with self._lock:
+            return self.pipeline.snapshot()
 
     def enqueue(
         self,
@@ -27,29 +30,32 @@ class ControllerCore:
         source_event_id: Optional[int] = None,
         source_object_id: Optional[int] = None,
     ) -> CoreResult:
-        command = Command(command_id, shape, source_event_id, source_object_id)
-        if command.command_id in self._accepted_command_ids:
-            return CoreResult("duplicate", self.pipeline_state())
-        if not self.fifo.enqueue(command):
-            return CoreResult("queue_full", self.pipeline_state())
-        self._accepted_command_ids.add(command.command_id)
-        return CoreResult("accepted", self.pipeline_state())
+        with self._lock:
+            command = Command(command_id, shape, source_event_id, source_object_id)
+            if command.command_id in self._accepted_command_ids:
+                return CoreResult("duplicate", self.pipeline_state())
+            if not self.fifo.enqueue(command):
+                return CoreResult("queue_full", self.pipeline_state())
+            self._accepted_command_ids.add(command.command_id)
+            return CoreResult("accepted", self.pipeline_state())
 
     def handle_key(self, key: Union[Key, str]) -> CoreResult:
-        transition = self.pipeline.handle_key(Key(key))
-        return CoreResult(
-            transition.kind.value.lower(),
-            self.pipeline_state(),
-            transition.command,
-            transition.branch,
-        )
+        with self._lock:
+            transition = self.pipeline.handle_key(Key(key))
+            return CoreResult(
+                transition.kind.value.lower(),
+                self.pipeline_state(),
+                transition.command,
+                transition.branch,
+            )
 
     def process_key_input(self, key_input: IKeyInput) -> Optional[CoreResult]:
         key = key_input.read_key()
         return self.handle_key(key) if key is not None else None
 
     def reset(self) -> CoreResult:
-        self.fifo.clear()
-        self.pipeline.reset()
-        self._accepted_command_ids.clear()
-        return CoreResult("reset", self.pipeline_state())
+        with self._lock:
+            self.fifo.clear()
+            self.pipeline.reset()
+            self._accepted_command_ids.clear()
+            return CoreResult("reset", self.pipeline_state())

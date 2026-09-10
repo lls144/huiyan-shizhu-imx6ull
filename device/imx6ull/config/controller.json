@@ -3,8 +3,16 @@
   "fifo_capacity": 3,
   "heartbeat_interval": 1000,
   "gpio": {
-    "key1": null,
-    "key2": null,
-    "key3": null
+    "key1": 24,
+    "key2": 25,
+    "key3": 26
+  },
+  "linux_input": {
+    "device_name": "huiyan-keys",
+    "key_codes": {
+      "KEY1": 148,
+      "KEY2": 149,
+      "KEY3": 202
+    }
   }
 }

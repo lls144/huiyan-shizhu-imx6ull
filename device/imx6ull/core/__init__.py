@@ -2,7 +2,7 @@
 
 from .controller import ControllerCore
 from .fifo import FifoQueue
-from .key_input import GpioKeyInput, IKeyInput, KeyInputResult, KeyInputStatus, KeyboardKeyInput
+from .key_input import GpioKeyInput, IKeyInput, KeyInputResult, KeyInputStatus, KeyboardKeyInput, LinuxInputKeyInput
 from .models import Command, Key, TransitionKind
 from .pipeline import PipelineFSM
 
@@ -16,6 +16,7 @@ __all__ = [
     "KeyInputResult",
     "KeyInputStatus",
     "KeyboardKeyInput",
+    "LinuxInputKeyInput",
     "PipelineFSM",
     "TransitionKind",
 ]
