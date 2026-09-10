@@ -87,7 +87,7 @@
 - **实现任务**：部署控制器服务，接入 GPIO 按键和分支控制所需 I/O；记录 UART 调试、网络、引脚与构建环境。
 - **验收标准**：目标板可重复部署和运行；按键输入与 GPIO 输出有真实硬件记录，不把主机模拟结果标为板端验证。
 - **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
-- **当前状态**：DOING。2026-09-10 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` 监听以及 Ubuntu 经 USB Gadget Ethernet 到 `198.51.100.2:9000` 的 10 项 TCP smoke。GPIO mapping 仍全为 null 且没有访问未知 pin；物理按键/输出、接线和 GPIO 实机证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、`notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md`。
+- **当前状态**：DOING。2026-09-10 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` 监听以及 Ubuntu 经 USB Gadget Ethernet 到 `198.51.100.2:9000` 的 10 项 TCP smoke。实体 KEY1/2/3 已通过确认的 `gpiochip0` lines 24/25/26、`gpio-keys`、`huiyan-keys` Linux input 和 Controller FSM 验证；应用不硬编码 `eventX`。GPIO 输出/分支硬件、其接线和真实输出证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、`notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md` 与 `notes/tests/TEST-009-M9-iMX6ULL实体GPIO按键验收.md`。
 
 ## M10 Qt LCD HMI — TODO
 
