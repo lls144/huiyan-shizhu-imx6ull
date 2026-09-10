@@ -105,6 +105,12 @@ class ControllerClient:
     def send_heartbeat(self) -> Future[dict[str, Any]]:
         return self._submit("heartbeat", {})
 
+    def send_key_event(self, key: str) -> Future[dict[str, Any]]:
+        return self._submit("key_event", {"key": key})
+
+    def request_pipeline_state(self) -> Future[dict[str, Any]]:
+        return self._submit("pipeline_state", {})
+
     def send_reset(self) -> Future[dict[str, Any]]:
         return self._submit("reset", {})
 

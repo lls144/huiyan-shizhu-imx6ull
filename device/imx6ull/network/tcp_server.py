@@ -1,4 +1,4 @@
-"""Desktop Linux M7 controller server; deliberately contains no FIFO or GPIO code."""
+"""Desktop Linux TCP adapter for the M8 FIFO and pipeline controller core."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
+from device.imx6ull.core.controller import ControllerCore
 from pc.communication.protocol import (
     MAX_LINE_BYTES,
     PROTOCOL_VERSION,
@@ -32,11 +33,11 @@ class _Connection:
 class DesktopControllerServer:
     """Selector-based TCP server suitable for localhost integration tests.
 
-    It validates the M7 protocol and remembers command IDs for duplicate ACKs.
-    FIFO, pipeline transitions, GPIO and LCD are intentionally deferred to M8+.
+    It validates JSON Lines and delegates accepted requests to ControllerCore.
+    GPIO, Qt LCD and ARM deployment remain intentionally outside this module.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 9000) -> None:
+    def __init__(self, host: str = "0.0.0.0", port: int = 9000, *, core: ControllerCore | None = None) -> None:
         if not host:
             raise ValueError("host must not be empty")
         if not 0 <= port <= 65535:
@@ -46,7 +47,7 @@ class DesktopControllerServer:
         self._selector = selectors.DefaultSelector()
         self._listener: socket.socket | None = None
         self._connections: dict[socket.socket, _Connection] = {}
-        self._accepted_command_ids: set[int] = set()
+        self.core = core or ControllerCore()
         self._stop = threading.Event()
         self._disconnect_clients = threading.Event()
         self._thread: threading.Thread | None = None
@@ -168,18 +169,21 @@ class DesktopControllerServer:
         request_id = message["request_id"]
         message_type = message["type"]
         if message_type == "enqueue":
-            command_id = message["command_id"]
-            duplicate = command_id in self._accepted_command_ids
-            if not duplicate:
-                self._accepted_command_ids.add(command_id)
+            result = self.core.enqueue(
+                message["command_id"],
+                message["shape"],
+                source_event_id=message.get("source_event_id"),
+                source_object_id=message.get("source_object_id"),
+            )
             self._queue(
                 connection,
                 {
                     "version": PROTOCOL_VERSION,
                     "type": "ack",
                     "request_id": request_id,
-                    "command_id": command_id,
-                    "status": "duplicate" if duplicate else "accepted",
+                    "command_id": message["command_id"],
+                    "status": result.status,
+                    "pipeline_state": result.pipeline_state,
                 },
             )
         elif message_type == "heartbeat":
@@ -188,19 +192,62 @@ class DesktopControllerServer:
                 {"version": PROTOCOL_VERSION, "type": "ack", "request_id": request_id, "status": "alive"},
             )
         elif message_type == "reset":
-            self._accepted_command_ids.clear()
+            result = self.core.reset()
             self._queue(
                 connection,
-                {"version": PROTOCOL_VERSION, "type": "ack", "request_id": request_id, "status": "reset"},
+                {
+                    "version": PROTOCOL_VERSION,
+                    "type": "ack",
+                    "request_id": request_id,
+                    "status": result.status,
+                    "pipeline_state": result.pipeline_state,
+                },
             )
-        else:  # pipeline_state query; real state payload is deferred to M8.
+        elif message_type == "key_event":
+            result = self.core.handle_key(message["key"])
+            if result.status == "sorted":
+                self._queue(
+                    connection,
+                    {
+                        "version": PROTOCOL_VERSION,
+                        "type": "sorted",
+                        "request_id": request_id,
+                        "command": result.command.to_record() if result.command is not None else None,
+                        "branch": result.branch,
+                        "pipeline_state": result.pipeline_state,
+                    },
+                )
+            elif result.status in {"wrong_station", "empty"}:
+                code = "WRONG_STATION" if result.status == "wrong_station" else "EMPTY_QUEUE"
+                self._queue(
+                    connection,
+                    {
+                        **error_message(code, result.status.replace("_", " "), request_id),
+                        "pipeline_state": result.pipeline_state,
+                    },
+                )
+            else:
+                self._queue(
+                    connection,
+                    {
+                        "version": PROTOCOL_VERSION,
+                        "type": "pipeline_state",
+                        "request_id": request_id,
+                        "status": result.status,
+                        "state": result.pipeline_state["station"],
+                        "pipeline_state": result.pipeline_state,
+                    },
+                )
+        else:  # pipeline_state query
+            state = self.core.pipeline_state()
             self._queue(
                 connection,
                 {
                     "version": PROTOCOL_VERSION,
                     "type": "pipeline_state",
                     "request_id": request_id,
-                    "state": "not_implemented",
+                    "state": state["station"],
+                    "pipeline_state": state,
                 },
             )
 
@@ -242,7 +289,7 @@ class DesktopControllerServer:
 
 
 def main() -> int:
-    """Run the M7 Desktop Linux server until interrupted by its operator."""
+    """Run the M8 Desktop Linux controller server until interrupted by its operator."""
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="0.0.0.0")
@@ -251,7 +298,7 @@ def main() -> int:
     server = DesktopControllerServer(args.host, args.port)
     server.start()
     host, port = server.address
-    print(f"M7 Desktop controller listening on {host}:{port}")
+    print(f"M8 Desktop controller listening on {host}:{port}")
     try:
         while True:
             threading.Event().wait(3600)

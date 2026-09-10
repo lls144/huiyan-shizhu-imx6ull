@@ -7,7 +7,8 @@ from typing import Any
 
 PROTOCOL_VERSION = 1
 SHAPES = frozenset({"triangle", "rectangle", "circle"})
-REQUEST_TYPES = frozenset({"enqueue", "heartbeat", "pipeline_state", "reset"})
+KEYS = frozenset({"KEY1", "KEY2", "KEY3"})
+REQUEST_TYPES = frozenset({"enqueue", "heartbeat", "key_event", "pipeline_state", "reset"})
 MAX_LINE_BYTES = 16 * 1024
 
 
@@ -68,6 +69,8 @@ def validate_request(message: dict[str, Any]) -> None:
         for field in ("source_event_id", "source_object_id"):
             if field in message:
                 _positive_int(message[field], field)
+    if message_type == "key_event" and message.get("key") not in KEYS:
+        raise ProtocolError("INVALID_KEY", "key must be KEY1, KEY2, or KEY3")
 
 
 def error_message(code: str, message: str, request_id: str | None = None) -> dict[str, Any]:
