@@ -68,3 +68,11 @@
 正式模拟器 JSON 生成时 dirty=false；含源码SHA-256、配置、故障、步骤、expected/actual、最终PLC状态及benchmark。所有 M6 数据为 **simulated / Fake PLC / no physical PLC**，没有截图要求。M5短时冒烟16.73FPS不算性能验收。实现和接口限制见 `M6_FAKE_PLC.md`。
 
 M6 fault scenarios 可供未来 M7/M9 复用，仅为 supporting simulator available；上表 PLC-001–004、COMM-001–003 的真实/正式验收仍待执行，不填未来 PASS。
+
+## M9 i.MX6ULL Controller 实机部署（2026-09-10）
+
+| 范围 | 实现与版本 | Test / Daily | 证据 | 结论 |
+|---|---|---|---|---|
+| Python 3.7 Controller 与真实 TCP | `device/imx6ull/`、`pc/communication/protocol.py`；`9906133a6db4e5391704fadf3c3b94b0b893b765` | `notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md`；`notes/daily/2026-09-10-M9-iMX6ULL实机部署与TCP验证.md` | `docs/IMX6ULL_DEPLOYMENT.md` 记录板端环境、compileall、监听与 10 项真实 `198.51.100.2:9000` smoke 响应 | i.MX6ULL 软件部署/TCP PASS；GPIO 硬件未测，M9 DOING |
+
+本条不是 PLC 证据，也不证明实体 GPIO 按键、输出或完整视觉闭环；那些项目继续保持 TODO。

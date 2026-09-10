@@ -1,0 +1,16 @@
+[Unit]
+Description=Huiyan i.MX6ULL controller (template)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=<controller-user>
+WorkingDirectory=<project-directory>
+Environment=PYTHONPATH=<project-directory>
+ExecStart=/usr/bin/python3 -m device.imx6ull.controller_main --mode imx6ull --config <controller-config-path>
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

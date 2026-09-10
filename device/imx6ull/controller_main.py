@@ -1,0 +1,66 @@
+"""Config-driven Desktop or future i.MX6ULL controller process entry point."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+import threading
+from dataclasses import dataclass
+from pathlib import Path
+
+# ``python3 device/imx6ull/controller_main.py`` is the operator-facing launch
+# form used on the board.  In that form Python puts ``device/imx6ull`` rather
+# than the repository root on sys.path, so make the package root explicit.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from device.imx6ull.config import ControllerConfig, load_controller_config
+from device.imx6ull.core import GpioKeyInput, IKeyInput, KeyboardKeyInput
+from device.imx6ull.core.controller import ControllerCore
+from device.imx6ull.network.tcp_server import DesktopControllerServer
+
+
+@dataclass(frozen=True)
+class ControllerRuntime:
+    config: ControllerConfig
+    key_input: IKeyInput
+    server: DesktopControllerServer
+
+
+def build_runtime(config: ControllerConfig, mode: str, host: str = "0.0.0.0") -> ControllerRuntime:
+    if mode == "desktop":
+        key_input = KeyboardKeyInput()  # type: IKeyInput
+    elif mode == "imx6ull":
+        key_input = GpioKeyInput(config.gpio.to_mapping())
+    else:
+        raise ValueError("mode must be desktop or imx6ull")
+    core = ControllerCore(capacity=config.fifo_capacity)
+    return ControllerRuntime(config, key_input, DesktopControllerServer(host, config.tcp_port, core=core))
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--mode", choices=("desktop", "imx6ull"), default="desktop")
+    parser.add_argument("--config", type=Path, default=Path(__file__).with_name("config") / "controller.json")
+    parser.add_argument("--host", default="0.0.0.0")
+    return parser
+
+
+def main() -> int:
+    args = _parser().parse_args()
+    runtime = build_runtime(load_controller_config(args.config), args.mode, args.host)
+    runtime.server.start()
+    host, port = runtime.server.address
+    print(f"controller mode={args.mode} listening on {host}:{port}")
+    print(f"key input status={runtime.key_input.poll().status.value}")
+    try:
+        while True:
+            threading.Event().wait(3600)
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        runtime.server.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

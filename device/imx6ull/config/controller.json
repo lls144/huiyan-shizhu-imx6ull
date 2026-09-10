@@ -1,0 +1,10 @@
+{
+  "tcp_port": 9000,
+  "fifo_capacity": 3,
+  "heartbeat_interval": 1000,
+  "gpio": {
+    "key1": null,
+    "key2": null,
+    "key3": null
+  }
+}
