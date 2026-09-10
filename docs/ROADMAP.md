@@ -81,13 +81,13 @@
 - **所需真实硬件**：核心逻辑可先在主机测试；实体执行验证在后续 i.MX6ULL 阶段完成。
 - **当前状态**：TODO。
 
-## M9 i.MX6ULL Linux 部署与 GPIO — TODO
+## M9 i.MX6ULL Linux 部署与 GPIO — DOING
 
 - **输入条件**：可用的 i.MX6ULL Linux 镜像、交叉编译或原生构建环境，以及已确认的 GPIO/LCD 硬件信息。
 - **实现任务**：部署控制器服务，接入 GPIO 按键和分支控制所需 I/O；记录 UART 调试、网络、引脚与构建环境。
 - **验收标准**：目标板可重复部署和运行；按键输入与 GPIO 输出有真实硬件记录，不把主机模拟结果标为板端验证。
 - **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
-- **当前状态**：TODO。
+- **当前状态**：DOING。2026-09-10 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` 监听以及 Ubuntu 经 USB Gadget Ethernet 到 `198.51.100.2:9000` 的 10 项 TCP smoke。GPIO mapping 仍全为 null 且没有访问未知 pin；物理按键/输出、接线和 GPIO 实机证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、`notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md`。
 
 ## M10 Qt LCD HMI — TODO
 
