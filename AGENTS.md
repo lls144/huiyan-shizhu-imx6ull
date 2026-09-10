@@ -55,13 +55,13 @@
 
 ## 当前阶段边界
 
-M2、M3、M4、M5 已完成真实摄像头验收；M6 已完成纯离线 Fake PLC 验收。M4 `DONE` 只表示 PC 端防重复识别与事件生成子能力完成，不表示 PLC-002 整体、真实 FIFO 或通信完成。M7、M8、M9 仍为 `TODO`，共享通信协议尚未冻结；未经项目负责人明确授权不得开始，也不得用 M6 模拟结果或 M3～M5 摄像头结果替代真实 PLC/通信证据。
+M2、M3、M4、M5 已完成真实摄像头验收；M6 已完成纯离线 Fake PLC 验收。M4 `DONE` 只表示 PC 端防重复识别与事件生成子能力完成，不表示 PLC-002 整体、真实 FIFO 或通信完成。2026-09-10，负责人明确授权的 i.MX6ULL 路线中，M7 PC–Controller TCP 和 M8 FIFO/三级 Pipeline FSM 已有代码、回归及真实板 TCP 证据；M9 已完成实体三按键输入，仍为 `DOING`，等待输出与端到端实体证据。共享 PLC 接口仍未冻结，真实 PLC 需求不因上述 Controller 证据关闭。
 
 2026-09-05 负责人明确将后续 PLC 部分交由同学负责。本次仅补充资料与协作规范，不启动功能实现。同学可按 `docs/COLLABORATION.md` 在 PLC 专属分支开展硬件核实、PLC 内部设计与独立开发；涉及未确定接口的部分先提交提案。此委派不授权其推进 PC 端、M6 模拟器、共享通信协议定版或系统联调。M6–M10 状态仍须依据实际进展、前置条件及负责人审核更新。
 
 ## 两人协作必读
 
-2026-09-05 后续明确授权 M6 纯离线 Fake PLC，并已通过 TEST-007（16 个场景、确定性重放、M4 集成），M6 为 DONE。2026-09-07，M3/M4/M5 的真实 Insta360 验收经 runtime JSON/CSV、图片和 session 审计后均为 DONE。M7/M8/M9 仍 TODO，不自动推进。模拟器位于 `simulator/`，共享协议未冻结，真实 COMM/PLC 需求不因模拟结果关闭。
+2026-09-05 后续明确授权 M6 纯离线 Fake PLC，并已通过 TEST-007（16 个场景、确定性重放、M4 集成），M6 为 DONE。2026-09-07，M3/M4/M5 的真实 Insta360 验收经 runtime JSON/CSV、图片和 session 审计后均为 DONE。2026-09-10，M7/M8 的 i.MX6ULL Controller 子路线以及 M9 实体输入已分别留下实机证据；M9 输出仍不自动推进，且真实 COMM/PLC 需求不因模拟或 Controller 路线结果关闭。
 
 - 项目负责人（仓库所有者）主导需求、架构、PC 端、接口定版、阶段验收与主分支合并；PLC 同学负责 `plc/`。Collaborator 权限不等于项目决策权。
 - 每次工作先读 `docs/COLLABORATION.md`、`docs/PLC_HARDWARE.md`、`docs/PLC_INTERFACE.md`；修改 `plc/` 前还须读 `plc/AGENTS.md`。

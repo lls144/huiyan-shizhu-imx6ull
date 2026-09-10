@@ -13,6 +13,7 @@ status: PASS_INPUT_OUTPUT_PENDING
 - Ubuntu 开发机：dev-host，仓库 `/home/developer/huiyan-shizhu`，分支 `imx6ull-development`；通过 USB Gadget Ethernet 访问实体板 `198.51.100.2`（SSH alias `imx6ull`）。
 - 目标板：野火 i.MX6ULL，Debian GNU/Linux 10 (buster)，`armv7l`，kernel `4.19.35-imx6`，Python 3.7.3。
 - 机械按键接线已经实体确认：KEY1/KEY2/KEY3 分别接 GPIO1_IO24/25/26，另一端共接 GND；VCC 未接。因此为被动、active-low 按键。
+- `debian` 已加入 `input` 组；实际 `id` 包含 `106(input)`，以普通用户读取 `/dev/input/event*`。本记录不包含密码或其他认证材料。
 - 本记录只验收 GPIO **输入**。GPIO 输出、LED/分支执行器与完整视觉闭环不在本次范围。
 
 ## 输入、配置与安全边界
@@ -33,7 +34,7 @@ dtoverlay=/usr/lib/linux-image-4.19.35-imx6/overlays/huiyan-keys.dtbo
 | KEY2 | `MX6UL_PAD_UART3_RX_DATA__GPIO1_IO25` | gpiochip0 line 25 | `KEY_PROG2` / 149 | 20 ms |
 | KEY3 | `MX6UL_PAD_UART3_CTS_B__GPIO1_IO26` | gpiochip0 line 26 | `KEY_PROG3` / 202 | 20 ms |
 
-`fsl,pins` 的 `0x0001b0b1` 启用输入路径、hysteresis 与 100 KOhm 上拉，匹配按键到 GND 的接线。`GPIO_ACTIVE_LOW` 只描述电气极性；Linux input 的按下事件仍为 value `1`，松开为 value `0`。
+`fsl,pins` 的 `0x0001b0b1` 启用输入路径和 HYS；PKE 启用 pull/keeper 电路，PUE 独立选择 pull（而不是 keeper），并选中内部 100 KOhm pull-up，匹配按键到 GND 的接线。`GPIO_ACTIVE_LOW` 只描述电气极性；Linux input 的按下事件仍为 value `1`，松开为 value `0`。UART3 overlay 保持禁用，项目未修改官方 `imx-fire-key.dtbo`。
 
 ## 实际步骤与结果
 
@@ -56,3 +57,5 @@ dtoverlay=/usr/lib/linux-image-4.19.35-imx6/overlays/huiyan-keys.dtbo
 ## 结论与限制
 
 gpio-keys、内部上拉、active-low 电气极性、Linux input 事件和 Python 3.7 的标准库输入后端均已在实体 i.MX6ULL 与实体按键上通过。TCP、FIFO、FSM、重复命令和 reset 语义未改变。M9 GPIO **输入**为 PASS；GPIO 输出/分拣执行器以及完整摄像头到物理输出闭环仍未验收，因此 M9 总体保持 **DOING**。
+
+同日完成了板载 red/green/blue LED 的只读方案审计：拟采用 Branch1 = red、Branch2 = red + green、Branch3 = red + green + blue。该审计不是 LED 输出测试；LED helper、权限通道、systemd、单灯/1-2-3 灯观察、reset 全灭及实体输出验收均为 **NOT YET VERIFIED**。
