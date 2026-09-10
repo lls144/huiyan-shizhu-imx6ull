@@ -1,0 +1,63 @@
+/*
+ * Huiyan three-button overlay for the Wildfire i.MX6ULL board.
+ *
+ * Wiring is active-low: GPIO -- mechanical switch -- GND.  No UART3 node is
+ * enabled or modified; this overlay claims only the three verified pad muxes.
+ */
+
+#include "huiyan-keys-pinfunc.h"
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "fsl,imx6ull-14x14-evk", "fsl,imx6ull";
+
+    fragment@0 {
+        target-path = "/";
+
+        __overlay__ {
+            huiyan_keys: huiyan-keys {
+                compatible = "gpio-keys";
+                label = "huiyan-keys";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_huiyan_keys>;
+
+                key1 {
+                    label = "Huiyan KEY1";
+                    gpios = <&gpio1 24 GPIO_ACTIVE_LOW>;
+                    linux,code = <KEY_PROG1>;
+                    debounce-interval = <20>;
+                };
+
+                key2 {
+                    label = "Huiyan KEY2";
+                    gpios = <&gpio1 25 GPIO_ACTIVE_LOW>;
+                    linux,code = <KEY_PROG2>;
+                    debounce-interval = <20>;
+                };
+
+                key3 {
+                    label = "Huiyan KEY3";
+                    gpios = <&gpio1 26 GPIO_ACTIVE_LOW>;
+                    linux,code = <KEY_PROG3>;
+                    debounce-interval = <20>;
+                };
+            };
+        };
+    };
+
+    fragment@1 {
+        target = <&iomuxc>;
+
+        __overlay__ {
+            pinctrl_huiyan_keys: huiyan-keysgrp {
+                fsl,pins = <
+                    MX6UL_PAD_UART3_TX_DATA__GPIO1_IO24 HUIYAN_PAD_CTL_INPUT_PULL_UP
+                    MX6UL_PAD_UART3_RX_DATA__GPIO1_IO25 HUIYAN_PAD_CTL_INPUT_PULL_UP
+                    MX6UL_PAD_UART3_CTS_B__GPIO1_IO26   HUIYAN_PAD_CTL_INPUT_PULL_UP
+                >;
+            };
+        };
+    };
+};
