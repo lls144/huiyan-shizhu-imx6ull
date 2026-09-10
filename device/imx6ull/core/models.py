@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from enum import StrEnum
-from typing import Any
+from enum import Enum
+from typing import Any, Dict, Optional
 
 SHAPES = frozenset({"triangle", "circle", "rectangle"})
 
@@ -13,8 +13,8 @@ SHAPES = frozenset({"triangle", "circle", "rectangle"})
 class Command:
     command_id: int
     shape: str
-    source_event_id: int | None = None
-    source_object_id: int | None = None
+    source_event_id: Optional[int] = None
+    source_object_id: Optional[int] = None
 
     def __post_init__(self) -> None:
         if type(self.command_id) is not int or self.command_id <= 0:
@@ -26,17 +26,17 @@ class Command:
             if value is not None and (type(value) is not int or value <= 0):
                 raise ValueError(f"{field} must be a positive integer when supplied")
 
-    def to_record(self) -> dict[str, Any]:
+    def to_record(self) -> Dict[str, Any]:
         return asdict(self)
 
 
-class Key(StrEnum):
+class Key(str, Enum):
     KEY1 = "KEY1"
     KEY2 = "KEY2"
     KEY3 = "KEY3"
 
 
-class TransitionKind(StrEnum):
+class TransitionKind(str, Enum):
     MOVED = "MOVED"
     SORTED = "SORTED"
     WRONG_STATION = "WRONG_STATION"
@@ -47,13 +47,13 @@ class TransitionKind(StrEnum):
 class PipelineTransition:
     kind: TransitionKind
     station: str
-    command: Command | None = None
-    branch: str | None = None
+    command: Optional[Command] = None
+    branch: Optional[str] = None
 
 
 @dataclass(frozen=True)
 class CoreResult:
     status: str
-    pipeline_state: dict[str, Any]
-    command: Command | None = None
-    branch: str | None = None
+    pipeline_state: Dict[str, Any]
+    command: Optional[Command] = None
+    branch: Optional[str] = None

@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
+
+# ``python3 device/imx6ull/controller_main.py`` is the operator-facing launch
+# form used on the board.  In that form Python puts ``device/imx6ull`` rather
+# than the repository root on sys.path, so make the package root explicit.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from device.imx6ull.config import ControllerConfig, load_controller_config
 from device.imx6ull.core import GpioKeyInput, IKeyInput, KeyboardKeyInput
@@ -22,7 +29,7 @@ class ControllerRuntime:
 
 def build_runtime(config: ControllerConfig, mode: str, host: str = "0.0.0.0") -> ControllerRuntime:
     if mode == "desktop":
-        key_input: IKeyInput = KeyboardKeyInput()
+        key_input = KeyboardKeyInput()  # type: IKeyInput
     elif mode == "imx6ull":
         key_input = GpioKeyInput(config.gpio.to_mapping())
     else:

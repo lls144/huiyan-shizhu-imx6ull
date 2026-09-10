@@ -11,7 +11,7 @@ import uuid
 from collections import deque
 from concurrent.futures import Future
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Deque, Dict, Optional, Tuple
 
 from .protocol import PROTOCOL_VERSION, encode_line
 
@@ -26,10 +26,10 @@ class ControllerTimeout(ControllerClientError):
 
 @dataclass
 class _PendingRequest:
-    message: dict[str, Any]
-    future: Future[dict[str, Any]]
+    message: Dict[str, Any]
+    future: Future
     attempts: int = 0
-    sent_at: float | None = None
+    sent_at: Optional[float] = None
     queued_for_write: bool = False
 
 
@@ -64,10 +64,10 @@ class ControllerClient:
         self.ack_timeout = ack_timeout
         self.reconnect_delay = reconnect_delay
         self.max_retries = max_retries
-        self._inbox: queue.Queue[_PendingRequest] = queue.Queue()
+        self._inbox = queue.Queue()  # type: queue.Queue
         self._stop = threading.Event()
         self._connected = threading.Event()
-        self._thread: threading.Thread | None = None
+        self._thread = None  # type: Optional[threading.Thread]
         self._lock = threading.Lock()
 
     def start(self) -> None:
@@ -92,32 +92,32 @@ class ControllerClient:
         command_id: int,
         shape: str,
         *,
-        source_event_id: int | None = None,
-        source_object_id: int | None = None,
-    ) -> Future[dict[str, Any]]:
-        payload: dict[str, Any] = {"command_id": command_id, "shape": shape}
+        source_event_id: Optional[int] = None,
+        source_object_id: Optional[int] = None,
+    ) -> Future:
+        payload = {"command_id": command_id, "shape": shape}  # type: Dict[str, Any]
         if source_event_id is not None:
             payload["source_event_id"] = source_event_id
         if source_object_id is not None:
             payload["source_object_id"] = source_object_id
         return self._submit("enqueue", payload)
 
-    def send_heartbeat(self) -> Future[dict[str, Any]]:
+    def send_heartbeat(self) -> Future:
         return self._submit("heartbeat", {})
 
-    def send_key_event(self, key: str) -> Future[dict[str, Any]]:
+    def send_key_event(self, key: str) -> Future:
         return self._submit("key_event", {"key": key})
 
-    def request_pipeline_state(self) -> Future[dict[str, Any]]:
+    def request_pipeline_state(self) -> Future:
         return self._submit("pipeline_state", {})
 
-    def send_reset(self) -> Future[dict[str, Any]]:
+    def send_reset(self) -> Future:
         return self._submit("reset", {})
 
-    def _submit(self, message_type: str, payload: dict[str, Any]) -> Future[dict[str, Any]]:
+    def _submit(self, message_type: str, payload: Dict[str, Any]) -> Future:
         self.start()
         request_id = str(uuid.uuid4())
-        future: Future[dict[str, Any]] = Future()
+        future = Future()  # type: Future
         self._inbox.put(
             _PendingRequest(
                 {"version": PROTOCOL_VERSION, "type": message_type, "request_id": request_id, **payload},
@@ -127,14 +127,14 @@ class ControllerClient:
         return future
 
     @staticmethod
-    def _close_socket(sock: socket.socket | None) -> None:
+    def _close_socket(sock: Optional[socket.socket]) -> None:
         if sock is not None:
             try:
                 sock.close()
             except OSError:
                 pass
 
-    def _connect(self) -> socket.socket | None:
+    def _connect(self) -> Optional[socket.socket]:
         try:
             sock = socket.create_connection((self.host, self.port), self.connect_timeout)
             sock.setblocking(False)
@@ -145,10 +145,10 @@ class ControllerClient:
             return None
 
     def _run(self) -> None:
-        pending: dict[str, _PendingRequest] = {}
-        outbound: deque[tuple[str, bytes]] = deque()
+        pending = {}  # type: Dict[str, _PendingRequest]
+        outbound = deque()  # type: Deque[Tuple[str, bytes]]
         socket_buffer = bytearray()
-        sock: socket.socket | None = None
+        sock = None  # type: Optional[socket.socket]
         next_connect = 0.0
         try:
             while not self._stop.is_set():

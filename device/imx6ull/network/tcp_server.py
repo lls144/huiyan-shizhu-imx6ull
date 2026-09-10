@@ -8,7 +8,7 @@ import threading
 import argparse
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Deque, Dict, Optional, Tuple
 
 from device.imx6ull.core.controller import ControllerCore
 from pc.communication.protocol import (
@@ -27,7 +27,7 @@ from pc.communication.protocol import (
 class _Connection:
     socket: socket.socket
     received: bytearray = field(default_factory=bytearray)
-    outgoing: deque[bytes] = field(default_factory=deque)
+    outgoing: Deque[bytes] = field(default_factory=deque)
 
 
 class DesktopControllerServer:
@@ -37,7 +37,7 @@ class DesktopControllerServer:
     GPIO, Qt LCD and ARM deployment remain intentionally outside this module.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 9000, *, core: ControllerCore | None = None) -> None:
+    def __init__(self, host: str = "0.0.0.0", port: int = 9000, *, core: Optional[ControllerCore] = None) -> None:
         if not host:
             raise ValueError("host must not be empty")
         if not 0 <= port <= 65535:
@@ -45,16 +45,16 @@ class DesktopControllerServer:
         self.host = host
         self.port = port
         self._selector = selectors.DefaultSelector()
-        self._listener: socket.socket | None = None
-        self._connections: dict[socket.socket, _Connection] = {}
+        self._listener = None  # type: Optional[socket.socket]
+        self._connections = {}  # type: Dict[socket.socket, _Connection]
         self.core = core or ControllerCore()
         self._stop = threading.Event()
         self._disconnect_clients = threading.Event()
-        self._thread: threading.Thread | None = None
+        self._thread = None  # type: Optional[threading.Thread]
         self._lock = threading.Lock()
 
     @property
-    def address(self) -> tuple[str, int]:
+    def address(self) -> Tuple[str, int]:
         if self._listener is None:
             raise RuntimeError("server is not running")
         host, port = self._listener.getsockname()[:2]
@@ -158,7 +158,7 @@ class DesktopControllerServer:
             self._handle_line(connection, line)
 
     def _handle_line(self, connection: _Connection, line: bytes) -> None:
-        message: dict[str, Any] | None = None
+        message = None  # type: Optional[Dict[str, Any]]
         try:
             message = decode_line(line)
             validate_request(message)
@@ -251,7 +251,7 @@ class DesktopControllerServer:
                 },
             )
 
-    def _queue(self, connection: _Connection, message: dict[str, Any]) -> None:
+    def _queue(self, connection: _Connection, message: Dict[str, Any]) -> None:
         connection.outgoing.append(encode_line(message))
         try:
             self._selector.modify(connection.socket, selectors.EVENT_READ | selectors.EVENT_WRITE, data=connection)

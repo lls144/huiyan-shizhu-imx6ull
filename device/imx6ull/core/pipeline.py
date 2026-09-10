@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict
+
 from .fifo import FifoQueue
 from .models import Key, PipelineTransition, TransitionKind
 
@@ -41,7 +43,7 @@ class PipelineFSM:
         self._station_index += 1
         return PipelineTransition(TransitionKind.MOVED, self.station, command)
 
-    def snapshot(self) -> dict[str, object]:
+    def snapshot(self) -> Dict[str, object]:
         front = self.fifo.front
         return {
             "station": self.station,

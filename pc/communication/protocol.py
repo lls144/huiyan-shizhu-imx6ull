@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Dict, Optional
 
 PROTOCOL_VERSION = 1
 SHAPES = frozenset({"triangle", "rectangle", "circle"})
@@ -20,13 +20,13 @@ class ProtocolError(ValueError):
         self.code = code
 
 
-def encode_line(message: dict[str, Any]) -> bytes:
+def encode_line(message: Dict[str, Any]) -> bytes:
     """Encode one compact UTF-8 JSON object followed by exactly one LF."""
 
     return (json.dumps(message, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
 
 
-def decode_line(line: bytes) -> dict[str, Any]:
+def decode_line(line: bytes) -> Dict[str, Any]:
     try:
         value = json.loads(line.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
@@ -36,7 +36,7 @@ def decode_line(line: bytes) -> dict[str, Any]:
     return value
 
 
-def request_id_from(message: object) -> str | None:
+def request_id_from(message: object) -> Optional[str]:
     return message.get("request_id") if isinstance(message, dict) and isinstance(message.get("request_id"), str) else None
 
 
@@ -46,7 +46,7 @@ def _positive_int(value: object, field: str) -> int:
     return value
 
 
-def validate_request(message: dict[str, Any]) -> None:
+def validate_request(message: Dict[str, Any]) -> None:
     """Validate the request forms accepted by the Desktop controller server."""
 
     if type(message.get("version")) is not int:
@@ -73,8 +73,8 @@ def validate_request(message: dict[str, Any]) -> None:
         raise ProtocolError("INVALID_KEY", "key must be KEY1, KEY2, or KEY3")
 
 
-def error_message(code: str, message: str, request_id: str | None = None) -> dict[str, Any]:
-    payload: dict[str, Any] = {
+def error_message(code: str, message: str, request_id: Optional[str] = None) -> Dict[str, Any]:
+    payload = {  # type: Dict[str, Any]
         "version": PROTOCOL_VERSION,
         "type": "error",
         "code": code,

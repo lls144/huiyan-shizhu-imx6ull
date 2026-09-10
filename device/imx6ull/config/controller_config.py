@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional, Union
 
 
 @dataclass(frozen=True)
 class GpioKeyConfig:
-    key1: int | None
-    key2: int | None
-    key3: int | None
+    key1: Optional[int]
+    key2: Optional[int]
+    key3: Optional[int]
 
     @classmethod
     def from_dict(cls, value: object) -> "GpioKeyConfig":
@@ -24,7 +24,7 @@ class GpioKeyConfig:
                 raise ValueError(f"gpio.{name} must be a non-negative integer or null")
         return cls(**fields)
 
-    def to_mapping(self) -> dict[str, int | None]:
+    def to_mapping(self) -> Dict[str, Optional[int]]:
         return {"key1": self.key1, "key2": self.key2, "key3": self.key3}
 
 
@@ -51,6 +51,6 @@ class ControllerConfig:
         return cls(tcp_port, fifo_capacity, heartbeat_interval, GpioKeyConfig.from_dict(value.get("gpio")))
 
 
-def load_controller_config(path: str | Path) -> ControllerConfig:
+def load_controller_config(path: Union[str, Path]) -> ControllerConfig:
     payload: Any = json.loads(Path(path).read_text(encoding="utf-8"))
     return ControllerConfig.from_dict(payload)

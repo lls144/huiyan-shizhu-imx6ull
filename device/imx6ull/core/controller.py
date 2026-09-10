@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict, Optional, Set, Union
+
 from .fifo import FifoQueue
 from .key_input import IKeyInput
 from .models import Command, CoreResult, Key, TransitionKind
@@ -12,9 +14,9 @@ class ControllerCore:
     def __init__(self, capacity: int = 3) -> None:
         self.fifo = FifoQueue(capacity)
         self.pipeline = PipelineFSM(self.fifo)
-        self._accepted_command_ids: set[int] = set()
+        self._accepted_command_ids = set()  # type: Set[int]
 
-    def pipeline_state(self) -> dict[str, object]:
+    def pipeline_state(self) -> Dict[str, object]:
         return self.pipeline.snapshot()
 
     def enqueue(
@@ -22,8 +24,8 @@ class ControllerCore:
         command_id: int,
         shape: str,
         *,
-        source_event_id: int | None = None,
-        source_object_id: int | None = None,
+        source_event_id: Optional[int] = None,
+        source_object_id: Optional[int] = None,
     ) -> CoreResult:
         command = Command(command_id, shape, source_event_id, source_object_id)
         if command.command_id in self._accepted_command_ids:
@@ -33,7 +35,7 @@ class ControllerCore:
         self._accepted_command_ids.add(command.command_id)
         return CoreResult("accepted", self.pipeline_state())
 
-    def handle_key(self, key: Key | str) -> CoreResult:
+    def handle_key(self, key: Union[Key, str]) -> CoreResult:
         transition = self.pipeline.handle_key(Key(key))
         return CoreResult(
             transition.kind.value.lower(),
@@ -42,7 +44,7 @@ class ControllerCore:
             transition.branch,
         )
 
-    def process_key_input(self, key_input: IKeyInput) -> CoreResult | None:
+    def process_key_input(self, key_input: IKeyInput) -> Optional[CoreResult]:
         key = key_input.read_key()
         return self.handle_key(key) if key is not None else None
 
