@@ -5,12 +5,14 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 import tracemalloc
 from pathlib import Path
 from typing import Sequence
 
-from pc.communication.state_monitor import BoardStateMonitor
-from pc.communication.vision_bridge import load_controller_connection_config
+from pc.communication.state_monitor import BoardStateMonitor, ConnectionStatus
+from pc.communication.vision_bridge import VisionEventEnqueuer, load_controller_connection_config
+from pc.communication.vision_dispatcher import VisionEventDispatcher
 from pc.events.config import load_event_config
 from pc.vision.config import load_vision_config
 from pc.vision.pipeline import analyze_multiple_objects
@@ -29,6 +31,11 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("pc/config/controller_windows_ethernet.json"),
         help="Windows RJ45 Controller profile used by the Board State monitor",
+    )
+    parser.add_argument(
+        "--command-id-start",
+        type=int,
+        help="optional positive start ID for this Camera-to-Controller GUI session",
     )
     parser.add_argument("--camera-config", type=Path, default=Path("pc/config/camera.json"))
     parser.add_argument(
@@ -72,14 +79,29 @@ def run(argv: Sequence[str] | None = None) -> int:
     vision_config = load_vision_config(args.vision_config)
     event_config = load_event_config(args.event_config)
     controller_connection = load_controller_connection_config(args.controller_config)
+    controller_client = controller_connection.make_client()
     board_monitor = BoardStateMonitor(
-        controller_connection.make_client(),
+        controller_client,
         request_timeout=(
             controller_connection.connect_timeout
             + controller_connection.ack_timeout * (controller_connection.max_retries + 1)
             + controller_connection.reconnect_delay
         ),
     )
+    event_dispatcher = None
+    if args.source == "camera":
+        command_id_start = args.command_id_start or int(time.time() * 1000)
+        if command_id_start < 1:
+            parser.error("--command-id-start must be positive")
+        event_dispatcher = VisionEventDispatcher(
+            VisionEventEnqueuer(
+                controller_client,
+                command_id_start,
+                result_timeout=controller_connection.ack_timeout
+                * (controller_connection.max_retries + 2),
+            ),
+            board_online=lambda: board_monitor.snapshot.connection is ConnectionStatus.ONLINE,
+        )
 
     if args.source == "synthetic":
         source_factory = lambda: SyntheticFrameSource(
@@ -109,6 +131,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         expected_labels=args.expected_labels,
         analyzer=analyze_multiple_objects,
         board_monitor=board_monitor,
+        event_dispatcher=event_dispatcher,
     )
     window.show()
     if not args.no_auto_start:

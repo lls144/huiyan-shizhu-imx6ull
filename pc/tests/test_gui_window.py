@@ -94,6 +94,20 @@ class ReadFailureSource(SequenceSource):
         raise RuntimeError("intentional read failure")
 
 
+class RecordingDispatcher:
+    def __init__(self) -> None:
+        self.events: list[object] = []
+
+    def submit(self, event: object) -> None:
+        self.events.append(event)
+
+    def drain(self) -> tuple[object, ...]:
+        return ()
+
+    def close(self) -> None:
+        pass
+
+
 def _window(tmp_path: Path, source_factory: Callable[[], Any], analyzer=analyze_multiple_objects) -> MainWindow:
     window = MainWindow(
         source_factory=source_factory,
@@ -176,6 +190,29 @@ def test_window_displays_synchronized_m3_m4_snapshot_and_resize(
     assert pixmap is not None
     assert pixmap.width() <= window.video_label.width()
     assert pixmap.height() <= window.video_label.height()
+    window.close()
+
+
+def test_window_passes_confirmed_lifecycle_events_to_its_dispatcher(
+    qt_app: QApplication, tmp_path: Path
+) -> None:
+    dispatcher = RecordingDispatcher()
+    window = MainWindow(
+        source_factory=lambda: SequenceSource([NORMAL_IMAGE, NORMAL_IMAGE]),
+        source_type="synthetic",
+        vision_config=VISION_CONFIG,
+        event_config=EVENT_CONFIG,
+        session_dir=tmp_path / "sessions",
+        evidence_root=tmp_path / "evidence",
+        expected_labels=("triangle", "rectangle", "circle"),
+        analyzer=analyze_multiple_objects,
+        event_dispatcher=dispatcher,  # type: ignore[arg-type]
+    )
+    window.show()
+    window.start_session()
+    _wait_until(qt_app, lambda: window.last_session_summary is not None and not window.is_running)
+
+    assert [event.label for event in dispatcher.events] == ["triangle", "rectangle", "circle"]
     window.close()
 
 

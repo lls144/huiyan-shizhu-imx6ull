@@ -34,8 +34,10 @@ from pc.events.config import EventConfig
 from pc.vision.config import VisionConfig
 from pc.vision.live import _git_state
 from pc.communication.state_monitor import BoardMonitorSnapshot, BoardStateMonitor, ConnectionStatus
+from pc.communication.vision_dispatcher import EnqueueResult, VisionEventDispatcher
 
 from .models import GuiSnapshot, GuiState, WorkerSummary
+from .digital_twin import DigitalSortingLine
 from .sources import FrameSource
 from .theme import APP_STYLE, THEME, load_ui_fonts
 from .worker import Analyzer, EvidenceRequestBuffer, LatestSnapshotBuffer, VisionWorker
@@ -98,6 +100,7 @@ class MainWindow(QMainWindow):
         expected_labels: Sequence[str],
         analyzer: Analyzer,
         board_monitor: BoardStateMonitor | None = None,
+        event_dispatcher: VisionEventDispatcher | None = None,
     ) -> None:
         super().__init__()
         load_ui_fonts()
@@ -110,6 +113,7 @@ class MainWindow(QMainWindow):
         self.expected_labels = tuple(expected_labels)
         self.analyzer = analyzer
         self._board_monitor = board_monitor
+        self._event_dispatcher = event_dispatcher
         self._board_timer: QTimer | None = None
         self._thread: QThread | None = None
         self._worker: VisionWorker | None = None
@@ -120,6 +124,7 @@ class MainWindow(QMainWindow):
         self._last_snapshot: GuiSnapshot | None = None
         self._gui_updates = 0
         self._recent_events: deque[tuple[str, str]] = deque(maxlen=30)
+        self._enqueue_records: list[dict[str, object]] = []
         self._state = GuiState.IDLE
         self.last_session_summary: dict[str, object] | None = None
         self.session_annotations: dict[str, object] = {}
@@ -206,7 +211,15 @@ class MainWindow(QMainWindow):
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.video_label.setMinimumSize(480, 300)
         self.video_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout.addWidget(self.video_label, 1)
+        self.digital_twin = DigitalSortingLine()
+        live_splitter = QSplitter(Qt.Orientation.Vertical)
+        live_splitter.setChildrenCollapsible(False)
+        live_splitter.addWidget(self.video_label)
+        live_splitter.addWidget(self.digital_twin)
+        live_splitter.setStretchFactor(0, 3)
+        live_splitter.setStretchFactor(1, 2)
+        live_splitter.setSizes([420, 280])
+        layout.addWidget(live_splitter, 1)
 
         evidence = QFrame()
         evidence.setObjectName("evidenceToolbar")
@@ -267,6 +280,7 @@ class MainWindow(QMainWindow):
         self.current_object_value = self._board_value("—")
         self.last_key_value = self._board_value("—")
         self.last_sort_value = self._board_value("—")
+        self.last_enqueue_value = self._board_value("—")
         rows = (
             ("CAMERA", self.camera_connection_value),
             ("BOARD", self.board_connection_value),
@@ -276,6 +290,7 @@ class MainWindow(QMainWindow):
             ("CURRENT OBJECT", self.current_object_value),
             ("LAST KEY", self.last_key_value),
             ("LAST SORT", self.last_sort_value),
+            ("LAST ENQUEUE", self.last_enqueue_value),
         )
         for row, (key_text, value) in enumerate(rows):
             key = QLabel(key_text)
@@ -411,6 +426,7 @@ class MainWindow(QMainWindow):
         snapshot = self._board_monitor.poll()
         if snapshot is not None:
             self._apply_board_snapshot(snapshot)
+        self._drain_enqueue_results()
 
     def _set_camera_connection(self, status: str) -> None:
         self.camera_connection_value.setText(status)
@@ -437,8 +453,30 @@ class MainWindow(QMainWindow):
             self.current_object_value.setText((pipeline.current_object or "none").upper())
             self.last_key_value.setText(pipeline.last_key or "none")
             self.last_sort_value.setText(pipeline.last_sort or "none")
+        self.digital_twin.set_pipeline(pipeline)
         if snapshot.error:
             self.statusBar().showMessage(f"Board monitor: {snapshot.error}", 3000)
+
+    def _drain_enqueue_results(self) -> None:
+        if self._event_dispatcher is None:
+            return
+        for result in self._event_dispatcher.drain():
+            self._apply_enqueue_result(result)
+
+    def _apply_enqueue_result(self, result: EnqueueResult) -> None:
+        record = result.to_record()
+        self._enqueue_records.append(record)
+        command = f" · cmd {result.command_id}" if result.command_id is not None else ""
+        self.last_enqueue_value.setText(f"{result.outcome.upper()} · {result.shape}{command}")
+        _set_dynamic_property(
+            self.last_enqueue_value,
+            "enqueueOutcome",
+            "accepted" if result.outcome == "accepted" else "failed",
+        )
+        self.statusBar().showMessage(
+            f"Vision event #{result.event_id} · {result.outcome}: {result.message}",
+            5000,
+        )
 
     def start_session(self) -> None:
         if self.is_running:
@@ -462,6 +500,7 @@ class MainWindow(QMainWindow):
             self.evidence_root,
             self.expected_labels,
             self.analyzer,
+            self._event_dispatcher,
         )
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
@@ -587,6 +626,7 @@ class MainWindow(QMainWindow):
                 "display_frames_dropped": max(0, summary.frames_processed - self._gui_updates),
                 "buffer_overwrites": self._buffer.overwritten_count if self._buffer else 0,
                 "clean_shutdown": summary.worker_clean_shutdown,
+                "controller_enqueues": list(self._enqueue_records),
                 **self.session_annotations,
             }
         )
@@ -637,6 +677,8 @@ class MainWindow(QMainWindow):
             return
         if self._board_timer is not None:
             self._board_timer.stop()
+        if self._event_dispatcher is not None:
+            self._event_dispatcher.close()
         if self._board_monitor is not None:
             self._board_monitor.close()
         event.accept()

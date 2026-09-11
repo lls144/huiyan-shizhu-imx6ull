@@ -39,7 +39,8 @@ def _state(*, station: str = "idle", queue_length: int = 0) -> dict[str, object]
             "front": front,
             "queue": [] if front is None else [front],
             "last_key": "KEY2" if queue_length else None,
-            "last_sort": {"branch": "Branch1"} if queue_length else None,
+            "last_sort": {"sequence": 4, "branch": "Branch1"} if queue_length else None,
+            "last_transition": "waiting" if queue_length else "idle",
         },
     }
 
