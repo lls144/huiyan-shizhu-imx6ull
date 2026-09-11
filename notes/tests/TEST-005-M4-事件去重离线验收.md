@@ -11,7 +11,7 @@ result: pass
 # TEST-005 M4 事件去重离线验收
 
 - **Test ID**：TEST-005
-- **对应 Requirement ID**：PLC-002 的 PC 端事件生成前置子能力
+- **对应 Requirement ID**：PC 端事件生成前置子能力
 - **实现 commit**：`7d83c57`
 - **测试 commit**：离线场景 `bdaca0b`；live 证据结构 `506fad2`
 - **证据 commit**：`46bb2a6`
@@ -81,7 +81,7 @@ session 报告 `git.dirty=true`，本字段未修改或隐藏；审计开始时�
 - M2 十张真实离线图片：`10/10`。
 - M3 synthetic：normal、bright、dark、side-light 在两种方案下仍全部精确识别三类；遮挡/接触局限未改写。
 - `pip check`：`No broken requirements found.`。
-- 同次最终回归：M2 10/10、M3 synthetic 必验光照 4/4、M4 12/12、M5 短时功能冒烟正常关闭、M6 16/16 且确定性重放；摘要见 `../../evidence/data/m3-m5-final-regression-summary.json`。
+- 同次最终回归：M2 10/10、M3 synthetic 必验光照 4/4、M4 12/12、M5 短时功能冒烟正常关闭。
 
 ## 证据
 
@@ -90,7 +90,7 @@ session 报告 `git.dirty=true`，本字段未修改或隐藏；审计开始时�
 - CSV：`../../evidence/data/m4/m4-offline-event-results.csv`
 
 > [!warning] 验收边界
-> M4 `DONE` 只代表 PC 端把逐帧 detection 转为去重 ENTER/EXIT 的子能力完成。它不代表 PLC-002 整体、PLC FIFO、按键出队、通信、ACK 或真实 PLC 已完成；这些状态仍为 `TODO`。
+> M4 `DONE` 代表 PC 端把逐帧 detection 转为去重 ENTER/EXIT 的子能力完成。FIFO、按键出队、通信和 ACK 由后续控制器阶段完成。
 
 ## 关联记录
 

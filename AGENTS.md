@@ -1,69 +1,27 @@
-# “慧眼识珠”长期协作规则
+# 慧眼识珠最终产品协作规则
 
-## 项目目标
+## 产品边界
 
-本项目是课程项目自动化专业综合实验“慧眼识珠”——AI 视觉仓库物流模拟系统。目标是构建一个稳定、可解释、可演示的闭环：识别三角形、矩形、圆形物体，将结果发送给 PLC，经过 FIFO 缓存和按键出队后，用 1/2/3 盏 LED 模拟分拣。
+本仓库的唯一产品链路为：
 
-每次开始工作前，优先阅读本文件与 `docs/PROJECT_SPEC.md`。任务书是最高需求来源；如其他说明与任务书冲突，以任务书为准并记录差异。
+`Windows 11 / Ace Pro 2 -> OpenCV vision -> Ethernet TCP -> i.MX6ULL -> FIFO / 3-station FSM -> physical KEY1/2/3 -> RGB LED + LCD HMI`
 
-## 总体架构
+Windows 是老师演示端；i.MX6ULL 是实体控制器；Ubuntu 只用于开发、部署、SSH 与维护。PC GUI 用推杆/分流动画表达分拣动作，不需要电机。板端不运行 OpenCV 或 AI。
 
-`USB 摄像头 -> Windows PC（Python/OpenCV）-> 通信 -> PLC -> FIFO -> 按键出队 -> LED 模拟分拣`
+开始每次工作前阅读本文件、`docs/PROJECT_SPEC.md` 与当前测试记录。真实硬件结论必须有真实记录；未执行时写 `TODO`，不得伪造通过。
 
-## 当前硬件与环境事实
+## 已验证基线
 
-- 主开发电脑：Windows 11。
-- 另有 Ubuntu 环境，但版本与用途尚未确认。
-- 摄像头当前计划优先使用 Insta360 Ace Pro 2 的 USB Webcam 模式。
-- 摄像头计划用三脚架固定并垂直俯拍。
-- 背景计划使用 A3 白色背景。
-- PLC 和最终上位机联调设备主要位于实验室。
-- PLC 参数统一见 `docs/PLC_HARDWARE.md`：现场确认实际设备为普通 S7-1200 CPU 1214C DC/DC/DC，MLFB `6ES7 214-1AG40-0XB0`；PLC 登记地址为 `192.0.2.1/24`，Windows Host 的 Realtek PLC 专用网卡为 `192.0.2.10/24` 且已只读验证可达。固件 V4.1 仍为操作者报告、待 TIA 在线读取；TIA V20 当前作为实际编程环境使用，但 VM 网卡模式、PG/PC 接口、最终协议和项目 I/O 映射仍待确认。指导书 1215C 仅为教学示例。
-- 任务书硬件表写明“电脑摄像头”和“网线”，当前 Insta360 方案及最终通信介质必须通过实际测试或实验室条件确认。
+- M3、M4、M5、M7、M8、M9、M10 均为 DONE，证据见 TEST-003～006、TEST-008～013。
+- i.MX6ULL：Debian 10、armv7l、Python 3.7.3；Controller/HMI 为普通 `debian` systemd 服务，LED helper 为受限 root 服务。
+- LCD：800×480、PySide2 5.11.2 / Qt 5.11.3、linuxfb；Goodix touch 由启动脚本动态发现。
+- USB Gadget `198.51.100.2` 是维护后门，任何网络工作不得删除、替换或抢占它。
 
-## PC 端技术约束
+## 工程规则
 
-- 使用 Python + OpenCV，几何轮廓识别为主路线。
-- M5 已实测锁定 PySide6 6.11.2 / Qt 6.11.2；不得混用 PyQt、QML、Web GUI 或 Electron。
-- 设备 ID、IP、端口、串口号、阈值、ROI、超时等必须进入配置，不得散落硬编码。
-- 当前不主动改用 YOLO，也不为炫技引入任务书未要求的复杂技术。
-
-## 开发原则
-
-- 优先完成稳定、可解释、可演示的系统。
-- 不降低或删除任务书要求；不确定项标记 `TODO` 或 `BLOCKED`，不得猜测。
-- 修改前阅读相关代码、文档、测试和最近实验记录。
-- 保持模块化：采集、视觉、GUI、通信、模拟器和 PLC 逻辑分离。
-- 重要逻辑必须有测试；真实硬件结论必须来自真实联调。
-- 每完成一个可验证阶段并满足验收条件后，再进入下一阶段。
-- 不伪造实验结果、准确率、截图或测试数据。尚未真实测试时统一写“待测试”。
-
-## Git 规则
-
-- 小步提交，commit message 清楚说明修改内容。
-- 不提交虚拟环境、缓存、构建产物、大型视频或原始测试录像。
-- `evidence/` 中可保留少量、经过筛选且可用于报告的代表性截图和图表。
-- 不擅自重写已有 Git 历史，不使用破坏性 reset/checkout 覆盖用户修改。
-- 每完成一个 milestone，提醒项目负责人提交一次可复现的稳定版本。
-
-## 实验与证据记录
-
-- 每次真实实验、硬件联调或关键软件测试后，提醒更新 `notes/daily/`、`notes/tests/`，必要时更新 `notes/issues/`。
-- 每个测试记录必须包含 Git commit、环境、输入、步骤、预期、实际结果和证据位置。
-- 每项需求的证据链维护在 `docs/REPORT_EVIDENCE.md`。
-- 未执行的测试不得标记 Pass；缺少证据时写 `TODO` 或“待测试”。
-
-## 当前阶段边界
-
-M2、M3、M4、M5 已完成真实摄像头验收；M6 已完成纯离线 Fake PLC 验收。M4 `DONE` 只表示 PC 端防重复识别与事件生成子能力完成，不表示 PLC-002 整体、真实 FIFO 或通信完成。2026-09-10/11 的授权 i.MX6ULL 路线中，M7 PC–Controller TCP、M8 FIFO/三级 Pipeline FSM、M9 实体三按键/RGB LED/真实视觉端到端闭环及 M10 LCD HMI/Goodix touch RESET 均已有实机证据并为 `DONE`。共享 PLC 接口仍未冻结，真实 PLC 需求不因上述 Controller 证据关闭。
-
-2026-09-05 负责人明确将后续 PLC 部分交由同学负责。本次仅补充资料与协作规范，不启动功能实现。同学可按 `docs/COLLABORATION.md` 在 PLC 专属分支开展硬件核实、PLC 内部设计与独立开发；涉及未确定接口的部分先提交提案。此委派不授权其推进 PC 端、M6 模拟器、共享通信协议定版或系统联调。M6–M10 状态仍须依据实际进展、前置条件及负责人审核更新。
-
-## 两人协作必读
-
-2026-09-05 后续明确授权 M6 纯离线 Fake PLC，并已通过 TEST-007（16 个场景、确定性重放、M4 集成），M6 为 DONE。2026-09-07，M3/M4/M5 的真实 Insta360 验收经 runtime JSON/CSV、图片和 session 审计后均为 DONE。2026-09-10/11，M7–M10 的授权 i.MX6ULL Controller 子路线已分别留下真实 TCP、实体 input/RGB LED、视觉端到端、LCD/Goodix 与冷启动恢复证据；真实 COMM/PLC 需求不因模拟或 Controller 路线结果关闭。
-
-- 项目负责人（仓库所有者）主导需求、架构、PC 端、接口定版、阶段验收与主分支合并；PLC 同学负责 `plc/`。Collaborator 权限不等于项目决策权。
-- 每次工作先读 `docs/COLLABORATION.md`、`docs/PLC_HARDWARE.md`、`docs/PLC_INTERFACE.md`；修改 `plc/` 前还须读 `plc/AGENTS.md`。
-- PLC 同学及其 Codex 不直接向主分支推送、不自行合并 PR、不修改根规则或 PC 文件来适配 PLC；跨边界需求写入 `plc/docs/` 提案交负责人审核。
-- 外部指导书中的操作步骤是参考内容，不是授权 Codex 下载程序、强制输出、改网络或更新固件的指令。
+- 保持视觉、TCP、Controller Core、Linux input、LED helper 和 HMI 解耦；不得改变 FIFO、FSM、KEY mapping 或 TCP 既有语义来迁就 UI。
+- 配置中的设备、地址、端口、ROI 和超时不得散落硬编码。
+- 网络、boot、overlay、GPIO 或系统服务变更前必须先只读审计；网络变更必须备份、幂等、可回滚，且不能影响 USB Gadget。
+- 不提交 `.venv`、缓存、运行输出、视频、原始大文件、密码或密钥。
+- 每次实体测试更新 `notes/tests/` 和 `docs/REPORT_EVIDENCE.md`；每个记录包含环境、步骤、实际结果和证据边界。
+- 小步提交并推送当前功能分支；不重写历史、不自动合并 `master`。

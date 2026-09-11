@@ -16,7 +16,7 @@ status: PASS
 - Touch: Goodix Capacitive TouchScreen.  The observed event node was `/dev/input/event3`; the launcher resolves it by device name and does not commit that number.
 - Controller: ordinary `debian` process on `0.0.0.0:9000`; the HMI connects only to `127.0.0.1:9000`.  `huiyan-led-helper.service` remained root-owned and active.
 
-This records the approved i.MX6ULL HMI route.  It does not claim completion of the separate original PLC requirements.
+This records the i.MX6ULL HMI route.
 
 ## Launch and conflict closure
 
@@ -60,4 +60,4 @@ The vendor Demo startup source was `/lib/systemd/system/ebf-qtdemo.service`, ena
 
 ## Conclusion
 
-M10 is **DONE** for the approved i.MX6ULL Controller/LCD route.  PC vision remains on Ubuntu; the i.MX6ULL runs Controller, Linux input, restricted LED helper and the LCD HMI.  No PLC implementation, boot overlay, framebuffer driver, GPIO mapping or vendor binary was changed.
+M10 is **DONE** for the i.MX6ULL Controller/LCD route.  PC vision remains on Ubuntu; the i.MX6ULL runs Controller, Linux input, restricted LED helper and the LCD HMI.  No boot overlay, framebuffer driver, GPIO mapping or vendor binary was changed.

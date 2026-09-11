@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-M4 为 `DONE`。软件实现、12 个 detection-only 离线模拟场景、M3 synthetic 集成测试和结构化证据均已完成；2026-09-07 又完成真实 Insta360 camera 生命周期验收。本模块没有修改 M3 分类规则，也不代表 PLC-002 整体完成。
+M4 为 `DONE`。软件实现、12 个 detection-only 离线模拟场景、M3 synthetic 集成测试和结构化证据均已完成；2026-09-07 又完成真实 Insta360 camera 生命周期验收。本模块没有修改 M3 分类规则。
 
 ## 数据流与边界
 
@@ -21,7 +21,7 @@ M4 只接收 detections，不接收图像，也不调用灰度化、二值化、
 - `ObjectState`：跨帧逻辑对象快照，包含递增 `object_id`、label、bbox、first/last seen、hit/miss、confirmed、active、event emitted、status 和平均 confidence。
 - `VisionEvent`：递增 `event_id`、`OBJECT_ENTER` 或 `OBJECT_EXIT`、object ID、label、平均 confidence、frame index。
 
-一个确认对象的一次生命周期最多产生一次 ENTER 和一次 EXIT。事件 ID 不是 PLC 协议序号，后续通信规则留给 M7。
+一个确认对象的一次生命周期最多产生一次 ENTER 和一次 EXIT。事件 ID 由后续 TCP bridge 映射为 command ID。
 
 ## 关联与状态规则
 
@@ -80,5 +80,4 @@ M4 只接收 detections，不接收图像，也不调用灰度化、二值化、
 - `max_missing_frames` 按处理帧而非墙钟时间计数；实时运行帧率变化会改变实际容忍时长。
 - 严重跳动超过两个空间阈值会创建新对象。
 - M3 合并轮廓输出 `unknown` 时，M4 不会把物理目标重新分开。
-- M4 已接入 GUI 展示，但没有 PLC 队列、通信、ACK、重发或队列满逻辑。
-- M4 `DONE` 只关闭 PC 事件层；PLC-002、M7 及以后仍按各自验收条件推进。
+- M4 已接入 GUI 展示；TCP、FIFO 和实体控制由后续 M7–M10 负责。

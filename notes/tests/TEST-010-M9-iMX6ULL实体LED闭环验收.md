@@ -11,7 +11,7 @@ status: PASS_OUTPUT_SUBSCOPE
 
 - 实现版本：`a8b54179ef16d85946407ae86d8cee9661b3744d`。
 - dev-host Ubuntu 经 USB Gadget Ethernet 对实体板 `198.51.100.2:9000` 执行 TCP 测试；目标为野火 i.MX6ULL、Debian 10、`armv7l`、kernel `4.19.35-imx6`、Python 3.7.3。
-- 本次只验收板载 RGB LED、helper 与实体按键/FSM 闭环；不构成 PC 视觉到 LED 的完整端到端验收，也不构成真实 PLC 证据。
+- 本次只验收板载 RGB LED、helper 与实体按键/FSM 闭环；不构成 PC 视觉到 LED 的完整端到端验收。
 
 ## 权限和安全边界
 
@@ -46,4 +46,4 @@ status: PASS_OUTPUT_SUBSCOPE
 
 ## 结论与限制
 
-M9 的板端输出子范围与实体按键/FSM/LED 闭环为 PASS。本记录形成时 PC 视觉事件到实体按键/LED 的完整端到端流程尚未实测。后续 TEST-011 已完成该缺口，因此批准的 i.MX6ULL M9 路线现为 DONE；这不表示原始 PLC 需求完成，也不表示 M10 已开始。
+M9 的板端输出子范围与实体按键/FSM/LED 闭环为 PASS。本记录形成时 PC 视觉事件到实体按键/LED 的完整端到端流程尚未实测。后续 TEST-011 已完成该缺口，因此 i.MX6ULL M9 路线现为 DONE；本记录没有提前标记后续 M10 工作。

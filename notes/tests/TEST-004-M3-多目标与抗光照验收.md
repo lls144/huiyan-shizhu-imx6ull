@@ -112,7 +112,7 @@ VISION-003 的真实分离多目标条件已满足；VISION-004 的三种真实�
 - 离线 runner 测试确认双方案结构一致、JSON 可序列化、CSV 字段完整。
 - 正常合成三目标图验证 triangle、rectangle、circle 分别输出并按中心从左到右排序。
 - 接触/遮挡结果只记录观察，不把合并轮廓虚假拆分成多个对象。
-- 2026-09-07 另行运行 M2 真实照片 10/10、M3 synthetic 必验光照 4/4、M4 离线 12/12、M5 5.021020 秒功能冒烟正常关闭、M6 16/16 且确定性重放；摘要见 `../../evidence/data/m3-m5-final-regression-summary.json`。
+- 2026-09-07 另行运行 M2 真实照片 10/10、M3 synthetic 必验光照 4/4、M4 离线 12/12、M5 5.021020 秒功能冒烟正常关闭。
 - synthetic PASS 与真实 camera PASS 在本记录中分节列出，不互相替代。
 
 ## 关联记录

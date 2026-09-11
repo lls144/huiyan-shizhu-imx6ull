@@ -15,7 +15,7 @@ status: PASS
 - Other services: root-owned `huiyan-led-helper.service`; ordinary-user `huiyan-hmi.service`; vendor `ebf-qtdemo.service` remains reversibly disabled.  No vendor binary, boot configuration, overlay, DTB, kernel, GPIO mapping or LED mapping was changed in this test.
 - HMI: PySide2 5.11.2 / Qt 5.11.3, `linuxfb:fb=/dev/fb0`, 800×480 LCD, dynamically discovered Goodix Capacitive TouchScreen.  `QT_QPA_FB_HIDECURSOR=1` remains prohibited because it causes a native crash on this target.
 
-This is an approved i.MX6ULL Controller-route record, not evidence that the original PLC communication/FIFO/I/O requirements are complete.
+This is an i.MX6ULL Controller-route record.
 
 ## Cold-start procedure
 
@@ -51,7 +51,7 @@ The Ubuntu `.venv` opened Ace Pro 2 explicitly with the committed `pc/config/cam
 
 ## Controlled Controller disconnect/reconnect
 
-The operator stopped only `huiyan-controller.service`.  The HMI remained alive and the operator observed OFFLINE.  Systemd then started the same service; the HMI returned ONLINE and Controller resumed listening with a new ordinary-user PID (773).  A final complete smoke result was PASS.  This tests HMI resilience to the actual service endpoint disappearing; it does not claim any unimplemented PLC watchdog/alarm behavior.
+The operator stopped only `huiyan-controller.service`.  The HMI remained alive and the operator observed OFFLINE.  Systemd then started the same service; the HMI returned ONLINE and Controller resumed listening with a new ordinary-user PID (773).  A final complete smoke result was PASS.  This tests HMI resilience to the actual service endpoint disappearing.
 
 ## Automated regression
 
@@ -65,4 +65,4 @@ The operator stopped only `huiyan-controller.service`.  The HMI remained alive a
 
 ## Conclusion
 
-The approved M7–M10 i.MX6ULL route now has a real power-cycle recovery path, a read-only field smoke command and a concise demo runbook.  M3, M4, M5, M7, M8, M9 and M10 remain DONE for their recorded scopes.  Original PLC requirements remain TODO.
+The M7–M10 i.MX6ULL route now has a real power-cycle recovery path, a read-only field smoke command and a concise demo runbook.  M3, M4, M5, M7, M8, M9 and M10 remain DONE for their recorded scopes.

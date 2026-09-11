@@ -1,4 +1,5 @@
 {
+  "profile_name": "Ubuntu USB maintenance",
   "host": "198.51.100.2",
   "port": 9000,
   "connect_timeout": 1.0,

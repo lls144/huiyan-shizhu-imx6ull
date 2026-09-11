@@ -56,6 +56,6 @@ dtoverlay=/usr/lib/linux-image-4.19.35-imx6/overlays/huiyan-keys.dtbo
 
 ## 结论与限制
 
-gpio-keys、内部上拉、active-low 电气极性、Linux input 事件和 Python 3.7 的标准库输入后端均已在实体 i.MX6ULL 与实体按键上通过。TCP、FIFO、FSM、重复命令和 reset 语义未改变。M9 GPIO **输入**为 PASS。本记录仅限输入；后续实体 LED 输出/按键闭环见 TEST-010，PC 摄像头到物理输出闭环见 TEST-011。自 TEST-011 起，批准的 i.MX6ULL M9 路线为 DONE；原始 PLC 路线仍独立 TODO。
+gpio-keys、内部上拉、active-low 电气极性、Linux input 事件和 Python 3.7 的标准库输入后端均已在实体 i.MX6ULL 与实体按键上通过。TCP、FIFO、FSM、重复命令和 reset 语义未改变。M9 GPIO **输入**为 PASS。本记录仅限输入；后续实体 LED 输出/按键闭环见 TEST-010，PC 摄像头到物理输出闭环见 TEST-011。自 TEST-011 起，i.MX6ULL M9 路线为 DONE。
 
 同日完成了板载 red/green/blue LED 的只读方案审计：Branch1 = red、Branch2 = red + green、Branch3 = red + green + blue。审计时它不是 LED 输出测试；后续 helper、权限通道、systemd、1/2/3 通道观察、reset 全灭及实体输出验收已在 `TEST-010-M9-iMX6ULL实体LED闭环验收.md` 中独立记录。

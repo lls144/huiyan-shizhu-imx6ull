@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 import unittest
+from pathlib import Path
 
-from pc.communication.vision_bridge import VisionEventEnqueuer
+from pc.communication.vision_bridge import VisionEventEnqueuer, load_controller_connection_config
 from pc.events.models import EventType, VisionEvent
 
 
@@ -33,6 +34,14 @@ def _event(event_type: EventType, event_id: int = 4, label: str = "circle") -> V
 
 
 class VisionEventEnqueuerTests(unittest.TestCase):
+    def test_named_demo_and_maintenance_profiles_are_unambiguous(self) -> None:
+        root = Path(__file__).parents[2]
+        windows = load_controller_connection_config(root / "pc/config/controller_windows_ethernet.json")
+        maintenance = load_controller_connection_config(root / "pc/config/controller_ubuntu_usb_maintenance.json")
+
+        self.assertEqual((windows.host, windows.port), ("203.0.113.2", 9000))
+        self.assertEqual((maintenance.host, maintenance.port), ("198.51.100.2", 9000))
+
     def test_confirmed_enter_maps_to_existing_enqueue_protocol(self) -> None:
         client = _FakeClient()
         bridge = VisionEventEnqueuer(client, 12000, expected_labels=("circle",))  # type: ignore[arg-type]

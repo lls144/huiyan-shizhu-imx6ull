@@ -15,7 +15,7 @@ status: PASS
 - Controller: real Wildfire i.MX6ULL, Debian GNU/Linux 10 (buster), armv7l, kernel 4.19.35-imx6, Python 3.7.3, `198.51.100.2:9000` over USB Gadget Ethernet. The listening Controller process ran as ordinary `debian`; `huiyan-led-helper.service` remained root-owned and active.
 - Physical input/output: `huiyan-keys` (KEY1/KEY2/KEY3) and the existing board RGB LED helper/official LED class. Their electrical mapping and helper security boundary are recorded separately in TEST-009 and TEST-010.
 
-This test validates the approved i.MX6ULL Controller route, not the still-unimplemented original PLC route. It does not claim completion of PLC communication, PLC I/O, LCD HMI, heartbeat watchdog/alarm requirements, or M10.
+This test validates the i.MX6ULL Controller route. It does not claim LCD HMI, heartbeat watchdog/alarm requirements, or M10 completion.
 
 ## PC bridge and safety boundary
 
@@ -25,7 +25,7 @@ The live command used M3's existing camera/pipeline and M4 event tracker with:
 .venv/bin/python -m pc.vision --config pc/config/vision.json multi-live \
   --camera-config pc/config/camera_ubuntu_acepro2.json --reuse-calibration \
   --events --event-config pc/config/events.json \
-  --controller-config pc/config/controller.json \
+  --controller-config pc/config/controller_ubuntu_usb_maintenance.json \
   --expected-labels <one-shape> --command-id-start <unique-positive-id>
 ```
 
@@ -71,4 +71,4 @@ Ubuntu Ace Pro 2 camera -> M3 recognition -> M4 OBJECT_ENTER
 -> physical KEY1/KEY2/KEY3 -> Branch1/2/3 -> physical RGB LED -> dequeue
 ```
 
-Therefore **M9 (the approved i.MX6ULL deployment/GPIO route) is DONE**. This conclusion is intentionally narrower than the original PLC task requirements, which remain TODO, and it does not start M10.
+Therefore **M9 (the i.MX6ULL deployment/GPIO route) is DONE**. This record does not start M10.

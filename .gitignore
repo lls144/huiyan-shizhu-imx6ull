@@ -42,9 +42,6 @@ output/
 !device/imx6ull/output/
 !device/imx6ull/output/*.py
 
-# PLC local working copies and VM images (curated TIA archives remain trackable)
-plc/work/
-plc/local/
 *.vmdk
 *.vdi
 *.vhd

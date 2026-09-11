@@ -62,8 +62,8 @@
 
 PC client 在后台线程中连接、发送和接收。它等待带相同 `request_id` 的 `ack` 或 `error`：超时或断线时，以相同 `request_id` 与 `command_id` 有界重试；超过重试上限后 Future 失败。控制器以 `command_id` 检测重复 enqueue，因此重连后的重复发送仍是幂等的。
 
-`heartbeat` 的 ACK 只证明 TCP 对端已处理该消息；不单独声明 LCD 或实体执行健康状态。M8 的 `pipeline_state` 包含内存 FIFO 与状态机快照。M9 已将实体按键和受限 LED output 接到该 FSM，并有独立实体 E2E 证据；heartbeat 仍不替代这些实体验收或未来 LCD/PLC 健康检查。
+`heartbeat` 的 ACK 只证明 TCP 对端已处理该消息；不单独声明 LCD 或实体执行健康状态。M8 的 `pipeline_state` 包含内存 FIFO 与状态机快照。M9 已将实体按键和受限 LED output 接到该 FSM，并有独立实体 E2E 证据；heartbeat 不替代这些实体验收。
 
-## M4 / M6 compatibility
+## Vision-event compatibility
 
-M4 的 `VisionEvent` 仅有 `OBJECT_ENTER` 才应经 M6 `CommandAdapter` 转换成语义命令；`OBJECT_EXIT` 不发送 enqueue。M7/M8 保持 M6 的三种 shape、`command_id` 和重复语义，但以真实 TCP、FIFO 和状态机替代 `InMemoryLink`；TEST-008 的实体地址为 `198.51.100.2:9000`，不是 localhost。这不是对已有 M1–M6 结果或 PLC 历史的修改。
+M4 的 `VisionEvent` 仅有 `OBJECT_ENTER` 才应经 `VisionEventEnqueuer` 转换成语义命令；`OBJECT_EXIT` 不发送 enqueue。M7/M8 使用真实 TCP、FIFO 和状态机处理三种 shape、`command_id` 和重复语义；TEST-008 的维护地址为 `198.51.100.2:9000`，不是 localhost。

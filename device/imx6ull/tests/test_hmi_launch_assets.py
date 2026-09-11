@@ -77,3 +77,18 @@ class HmiLaunchAssetTests(unittest.TestCase):
             self.assertIn(required, source)
         for forbidden in ("request_reset", ".enqueue(", "handle_key(", "> /sys/class/leds"):
             self.assertNotIn(forbidden, source)
+
+    def test_demo_ethernet_script_requires_explicit_non_usb_interface(self):
+        source = (ROOT / "scripts" / "configure_demo_ethernet.sh").read_text(encoding="utf-8")
+        for required in (
+            "--interface is required",
+            "refusing to modify USB Gadget interface usb0",
+            "connmanctl config",
+            "--dry-run is the default",
+            "--install-stable-mac",
+            "MACAddress=$stable_mac",
+            "no RJ45 carrier; refusing to apply an unverified interface",
+            "198.51.100.2/30",
+            "--rollback requires root",
+        ):
+            self.assertIn(required, source)
