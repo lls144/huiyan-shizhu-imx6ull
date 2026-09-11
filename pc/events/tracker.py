@@ -60,7 +60,7 @@ class _Track:
         elif not self.confirmed:
             status = "candidate"
         elif self.miss_count:
-            status = "missing"
+            status = "pending_exit"
         else:
             status = "confirmed"
         return ObjectState(
@@ -86,7 +86,14 @@ def _detection_key(detection: Detection) -> tuple[float, float, str, int, int]:
 
 
 class ObjectStateManager:
-    """Convert ordered detection frames into at-most-once ENTER/EXIT events."""
+    """Convert ordered detections into lifecycle facts with occlusion grace.
+
+    A confirmed object remains active during ``occlusion_grace_frames`` misses.
+    A same-shape detection can recover that pending track only while it is
+    active and passes the existing IoU or center-distance association gate.
+    Thus a short hand occlusion preserves identity, while a completed exit
+    still releases the object ID for a later genuine re-entry.
+    """
 
     def __init__(self, config: EventConfig) -> None:
         config.validate()
@@ -153,6 +160,15 @@ class ObjectStateManager:
                     pairs.append((-iou, distance, track.object_id, detection_index))
         return sorted(pairs)
 
+    def _missing_tolerance(self, track: _Track) -> int:
+        """Return candidate or entered-object disappearance allowance."""
+
+        return (
+            self.config.occlusion_grace_frames
+            if track.confirmed
+            else self.config.max_missing_frames
+        )
+
     def process_frame(
         self,
         frame_index: int,
@@ -203,16 +219,12 @@ class ObjectStateManager:
         for track in active_tracks:
             if track.object_id in matched_track_ids:
                 continue
-            if not track.confirmed:
-                track.active = False
-                track.miss_count = 1
-                track.consecutive_hits = 0
-                continue
             track.miss_count += 1
             track.consecutive_hits = 0
-            if track.miss_count > self.config.max_missing_frames:
+            if track.miss_count > self._missing_tolerance(track):
                 track.active = False
-                events.append(self._event(EventType.OBJECT_EXIT, track, frame_index))
+                if track.confirmed:
+                    events.append(self._event(EventType.OBJECT_EXIT, track, frame_index))
 
         unmatched = [
             detection

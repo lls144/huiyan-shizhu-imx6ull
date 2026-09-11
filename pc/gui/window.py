@@ -34,8 +34,10 @@ from pc.events.config import EventConfig
 from pc.vision.config import VisionConfig
 from pc.vision.live import _git_state
 from pc.communication.state_monitor import BoardMonitorSnapshot, BoardStateMonitor, ConnectionStatus
+from pc.communication.vision_dispatcher import EnqueueResult, VisionEventDispatcher
 
 from .models import GuiSnapshot, GuiState, WorkerSummary
+from .digital_twin import DigitalSortingLine
 from .sources import FrameSource
 from .theme import APP_STYLE, THEME, load_ui_fonts
 from .worker import Analyzer, EvidenceRequestBuffer, LatestSnapshotBuffer, VisionWorker
@@ -98,6 +100,7 @@ class MainWindow(QMainWindow):
         expected_labels: Sequence[str],
         analyzer: Analyzer,
         board_monitor: BoardStateMonitor | None = None,
+        event_dispatcher: VisionEventDispatcher | None = None,
     ) -> None:
         super().__init__()
         load_ui_fonts()
@@ -110,6 +113,7 @@ class MainWindow(QMainWindow):
         self.expected_labels = tuple(expected_labels)
         self.analyzer = analyzer
         self._board_monitor = board_monitor
+        self._event_dispatcher = event_dispatcher
         self._board_timer: QTimer | None = None
         self._thread: QThread | None = None
         self._worker: VisionWorker | None = None
@@ -120,6 +124,7 @@ class MainWindow(QMainWindow):
         self._last_snapshot: GuiSnapshot | None = None
         self._gui_updates = 0
         self._recent_events: deque[tuple[str, str]] = deque(maxlen=30)
+        self._enqueue_records: list[dict[str, object]] = []
         self._state = GuiState.IDLE
         self.last_session_summary: dict[str, object] | None = None
         self.session_annotations: dict[str, object] = {}
@@ -206,7 +211,15 @@ class MainWindow(QMainWindow):
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.video_label.setMinimumSize(480, 300)
         self.video_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout.addWidget(self.video_label, 1)
+        self.digital_twin = DigitalSortingLine()
+        live_splitter = QSplitter(Qt.Orientation.Vertical)
+        live_splitter.setChildrenCollapsible(False)
+        live_splitter.addWidget(self.video_label)
+        live_splitter.addWidget(self.digital_twin)
+        live_splitter.setStretchFactor(0, 3)
+        live_splitter.setStretchFactor(1, 2)
+        live_splitter.setSizes([420, 280])
+        layout.addWidget(live_splitter, 1)
 
         evidence = QFrame()
         evidence.setObjectName("evidenceToolbar")
@@ -260,22 +273,28 @@ class MainWindow(QMainWindow):
         board_grid.setHorizontalSpacing(10)
         board_grid.setVerticalSpacing(4)
         self.camera_connection_value = self._board_value("OFFLINE")
-        self.board_connection_value = self._board_value("CONNECTING")
+        self.ethernet_connection_value = self._board_value("CONNECTING")
         self.controller_connection_value = self._board_value("CONNECTING")
+        self.heartbeat_value = self._board_value("CONNECTING")
+        self.board_connection_value = self._board_value("CONNECTING")
         self.fifo_value = self._board_value("—/3")
         self.station_value = self._board_value("—")
         self.current_object_value = self._board_value("—")
         self.last_key_value = self._board_value("—")
         self.last_sort_value = self._board_value("—")
+        self.last_enqueue_value = self._board_value("—")
         rows = (
             ("CAMERA", self.camera_connection_value),
+            ("ETHERNET", self.ethernet_connection_value),
+            ("CONTROLLER TCP", self.controller_connection_value),
+            ("HEARTBEAT", self.heartbeat_value),
             ("BOARD", self.board_connection_value),
-            ("CONTROLLER", self.controller_connection_value),
             ("FIFO", self.fifo_value),
             ("STATION", self.station_value),
             ("CURRENT OBJECT", self.current_object_value),
             ("LAST KEY", self.last_key_value),
             ("LAST SORT", self.last_sort_value),
+            ("LAST ENQUEUE", self.last_enqueue_value),
         )
         for row, (key_text, value) in enumerate(rows):
             key = QLabel(key_text)
@@ -388,15 +407,24 @@ class MainWindow(QMainWindow):
         active = state in {GuiState.STARTING, GuiState.RUNNING, GuiState.STOPPING}
         self.start_button.setEnabled(not active)
         self.stop_button.setEnabled(state in {GuiState.STARTING, GuiState.RUNNING})
-        camera_running = self.source_type == "camera" and state == GuiState.RUNNING
+        camera_status = "OFFLINE"
+        if self.source_type == "camera" and state == GuiState.STARTING:
+            camera_status = "CONNECTING"
+        elif self.source_type == "camera" and state == GuiState.RUNNING:
+            camera_status = "ONLINE"
         for button in self.scenario_buttons:
-            button.setEnabled(camera_running)
-        self._set_camera_connection("ONLINE" if camera_running else "OFFLINE")
+            button.setEnabled(camera_status == "ONLINE")
+        self._set_camera_connection(camera_status)
 
     def _start_board_monitor(self) -> None:
         if self._board_monitor is None:
             self._apply_board_snapshot(
-                BoardMonitorSnapshot(ConnectionStatus.OFFLINE, None, "Board monitor is not configured")
+                BoardMonitorSnapshot(
+                    ConnectionStatus.OFFLINE,
+                    None,
+                    "Board monitor is not configured",
+                    ConnectionStatus.OFFLINE,
+                )
             )
             return
         self._apply_board_snapshot(self._board_monitor.start())
@@ -411,6 +439,7 @@ class MainWindow(QMainWindow):
         snapshot = self._board_monitor.poll()
         if snapshot is not None:
             self._apply_board_snapshot(snapshot)
+        self._drain_enqueue_results()
 
     def _set_camera_connection(self, status: str) -> None:
         self.camera_connection_value.setText(status)
@@ -418,12 +447,17 @@ class MainWindow(QMainWindow):
         _set_dynamic_property(self.camera_connection_value, "connection", status.lower())
 
     def _apply_board_snapshot(self, snapshot: BoardMonitorSnapshot) -> None:
-        connection = snapshot.connection.value.upper()
-        self.board_connection_value.setText(connection)
-        self.controller_connection_value.setText(connection)
-        self.status_board_connection.setText(f"BOARD {connection}")
-        for value in (self.board_connection_value, self.controller_connection_value):
+        heartbeat = snapshot.connection.value.upper()
+        transport = snapshot.transport.value.upper()
+        self.board_connection_value.setText(heartbeat)
+        self.heartbeat_value.setText(heartbeat)
+        self.controller_connection_value.setText(transport)
+        self.ethernet_connection_value.setText(transport)
+        self.status_board_connection.setText(f"BOARD {heartbeat}")
+        for value in (self.board_connection_value, self.heartbeat_value):
             _set_dynamic_property(value, "connection", snapshot.connection.value)
+        for value in (self.controller_connection_value, self.ethernet_connection_value):
+            _set_dynamic_property(value, "connection", snapshot.transport.value)
         pipeline = snapshot.pipeline
         if pipeline is None:
             self.fifo_value.setText("—/3")
@@ -437,8 +471,30 @@ class MainWindow(QMainWindow):
             self.current_object_value.setText((pipeline.current_object or "none").upper())
             self.last_key_value.setText(pipeline.last_key or "none")
             self.last_sort_value.setText(pipeline.last_sort or "none")
+        self.digital_twin.set_pipeline(pipeline)
         if snapshot.error:
             self.statusBar().showMessage(f"Board monitor: {snapshot.error}", 3000)
+
+    def _drain_enqueue_results(self) -> None:
+        if self._event_dispatcher is None:
+            return
+        for result in self._event_dispatcher.drain():
+            self._apply_enqueue_result(result)
+
+    def _apply_enqueue_result(self, result: EnqueueResult) -> None:
+        record = result.to_record()
+        self._enqueue_records.append(record)
+        command = f" · cmd {result.command_id}" if result.command_id is not None else ""
+        self.last_enqueue_value.setText(f"{result.outcome.upper()} · {result.shape}{command}")
+        _set_dynamic_property(
+            self.last_enqueue_value,
+            "enqueueOutcome",
+            "accepted" if result.outcome == "accepted" else "failed",
+        )
+        self.statusBar().showMessage(
+            f"Vision event #{result.event_id} · {result.outcome}: {result.message}",
+            5000,
+        )
 
     def start_session(self) -> None:
         if self.is_running:
@@ -462,6 +518,7 @@ class MainWindow(QMainWindow):
             self.evidence_root,
             self.expected_labels,
             self.analyzer,
+            self._event_dispatcher,
         )
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
@@ -587,6 +644,7 @@ class MainWindow(QMainWindow):
                 "display_frames_dropped": max(0, summary.frames_processed - self._gui_updates),
                 "buffer_overwrites": self._buffer.overwritten_count if self._buffer else 0,
                 "clean_shutdown": summary.worker_clean_shutdown,
+                "controller_enqueues": list(self._enqueue_records),
                 **self.session_annotations,
             }
         )
@@ -637,6 +695,8 @@ class MainWindow(QMainWindow):
             return
         if self._board_timer is not None:
             self._board_timer.stop()
+        if self._event_dispatcher is not None:
+            self._event_dispatcher.close()
         if self._board_monitor is not None:
             self._board_monitor.close()
         event.accept()

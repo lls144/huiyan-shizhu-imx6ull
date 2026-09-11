@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QFrame
 from pc.events.config import EventConfig, load_event_config
 from pc.gui.models import GuiState
 from pc.gui.sources import SyntheticFrameSource
+from pc.communication.state_monitor import BoardMonitorSnapshot, ConnectionStatus
 from pc.gui.window import MainWindow, bgr_to_qimage
 from pc.vision.config import VisionConfig, load_vision_config
 from pc.vision.pipeline import analyze_multiple_objects
@@ -92,6 +93,20 @@ class OpenFailureSource(SequenceSource):
 class ReadFailureSource(SequenceSource):
     def read(self) -> np.ndarray | None:
         raise RuntimeError("intentional read failure")
+
+
+class RecordingDispatcher:
+    def __init__(self) -> None:
+        self.events: list[object] = []
+
+    def submit(self, event: object) -> None:
+        self.events.append(event)
+
+    def drain(self) -> tuple[object, ...]:
+        return ()
+
+    def close(self) -> None:
+        pass
 
 
 def _window(tmp_path: Path, source_factory: Callable[[], Any], analyzer=analyze_multiple_objects) -> MainWindow:
@@ -179,11 +194,36 @@ def test_window_displays_synchronized_m3_m4_snapshot_and_resize(
     window.close()
 
 
+def test_window_passes_confirmed_lifecycle_events_to_its_dispatcher(
+    qt_app: QApplication, tmp_path: Path
+) -> None:
+    dispatcher = RecordingDispatcher()
+    window = MainWindow(
+        source_factory=lambda: SequenceSource([NORMAL_IMAGE, NORMAL_IMAGE]),
+        source_type="synthetic",
+        vision_config=VISION_CONFIG,
+        event_config=EVENT_CONFIG,
+        session_dir=tmp_path / "sessions",
+        evidence_root=tmp_path / "evidence",
+        expected_labels=("triangle", "rectangle", "circle"),
+        analyzer=analyze_multiple_objects,
+        event_dispatcher=dispatcher,  # type: ignore[arg-type]
+    )
+    window.show()
+    window.start_session()
+    _wait_until(qt_app, lambda: window.last_session_summary is not None and not window.is_running)
+
+    assert [event.label for event in dispatcher.events] == ["triangle", "rectangle", "circle"]
+    window.close()
+
+
 def test_full_synthetic_lifecycle_has_one_enter_and_exit_per_object(
     qt_app: QApplication, tmp_path: Path
 ) -> None:
     blank = np.full_like(NORMAL_IMAGE, 245)
-    frames = [blank] * 2 + [NORMAL_IMAGE] * 3 + [blank] * 4
+    # Confirmed objects stay PENDING_EXIT through the configured 25-frame
+    # hand-occlusion grace.  Only the following missing frame is a real EXIT.
+    frames = [blank] * 2 + [NORMAL_IMAGE] * 3 + [blank] * 26
     window = _window(tmp_path, lambda: SequenceSource(frames))
     window.start_session()
     _wait_until(qt_app, lambda: window.last_session_summary is not None and not window.is_running)
@@ -250,6 +290,68 @@ def test_source_failures_are_visible_and_recoverable(
     _wait_until(qt_app, lambda: attempts == 2 and window.state == GuiState.IDLE)
     assert window.last_session_summary["error"] is None  # type: ignore[index]
     assert window.state == GuiState.IDLE
+    window.close()
+
+
+def test_camera_start_failure_leaves_health_window_open_for_retry(
+    qt_app: QApplication, tmp_path: Path
+) -> None:
+    window = MainWindow(
+        source_factory=lambda: OpenFailureSource([NORMAL_IMAGE]),
+        source_type="camera",
+        vision_config=VISION_CONFIG,
+        event_config=EVENT_CONFIG,
+        session_dir=tmp_path / "sessions",
+        evidence_root=tmp_path / "evidence",
+        expected_labels=("triangle", "rectangle", "circle"),
+        analyzer=analyze_multiple_objects,
+    )
+    window.show()
+    window.start_session()
+    _wait_until(qt_app, lambda: window.state == GuiState.ERROR and not window.is_running)
+
+    assert window.isVisible()
+    assert window.camera_connection_value.text() == "OFFLINE"
+    assert window.board_connection_value.text() == "OFFLINE"
+    assert window.controller_connection_value.text() == "OFFLINE"
+    window.close()
+
+
+def test_camera_starting_and_running_health_states(qt_app: QApplication, tmp_path: Path) -> None:
+    window = MainWindow(
+        source_factory=lambda: SequenceSource([NORMAL_IMAGE], loop=True),
+        source_type="camera",
+        vision_config=VISION_CONFIG,
+        event_config=EVENT_CONFIG,
+        session_dir=tmp_path / "sessions",
+        evidence_root=tmp_path / "evidence",
+        expected_labels=("triangle", "rectangle", "circle"),
+        analyzer=analyze_multiple_objects,
+    )
+    window.show()
+    window.start_session()
+    assert window.camera_connection_value.text() in {"CONNECTING", "ONLINE"}
+    _wait_until(qt_app, lambda: window.state == GuiState.RUNNING)
+
+    assert window.camera_connection_value.text() == "ONLINE"
+    window.stop_session(block=True)
+    _wait_until(qt_app, lambda: not window.is_running)
+    window.close()
+
+
+def test_board_health_rows_distinguish_tcp_transport_from_heartbeat(
+    qt_app: QApplication, tmp_path: Path
+) -> None:
+    window = _window(tmp_path, lambda: SequenceSource([NORMAL_IMAGE]))
+    window._apply_board_snapshot(
+        BoardMonitorSnapshot(ConnectionStatus.OFFLINE, None, "heartbeat timed out", ConnectionStatus.ONLINE)
+    )
+    qt_app.processEvents()
+
+    assert window.ethernet_connection_value.text() == "ONLINE"
+    assert window.controller_connection_value.text() == "ONLINE"
+    assert window.heartbeat_value.text() == "OFFLINE"
+    assert window.board_connection_value.text() == "OFFLINE"
     window.close()
 
 

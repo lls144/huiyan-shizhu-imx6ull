@@ -9,6 +9,7 @@ request and records the Controller acknowledgement for the live-session log.
 from __future__ import annotations
 
 import json
+from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
@@ -19,6 +20,16 @@ from .controller_client import ControllerClient
 
 
 SORTABLE_SHAPES = frozenset(("triangle", "circle", "rectangle"))
+
+
+class ControllerEnqueueRejected(RuntimeError):
+    """A valid Controller ACK that did not accept a vision command."""
+
+    def __init__(self, command_id: int, response: Dict[str, Any]) -> None:
+        self.command_id = command_id
+        self.response = response
+        self.status = str(response.get("status", "unknown"))
+        super().__init__(f"Controller did not accept vision enqueue {command_id}: {response!r}")
 
 
 @dataclass(frozen=True)
@@ -120,16 +131,21 @@ class VisionEventEnqueuer:
             )
 
         command_id = self._command_id_start + event.event_id - 1
-        response = self._client.send_enqueue(
+        response_future = self._client.send_enqueue(
             command_id,
             event.label,
             source_event_id=event.event_id,
             source_object_id=event.object_id,
-        ).result(self._result_timeout)
+        )
+        try:
+            response = response_future.result(self._result_timeout)
+        except FutureTimeout:
+            # Do not let ControllerClient replay a stale visual event if the
+            # board reconnects after this live-frame decision has expired.
+            response_future.cancel()
+            raise
         if response.get("status") != "accepted":
-            raise RuntimeError(
-                f"Controller did not accept vision enqueue {command_id}: {response!r}"
-            )
+            raise ControllerEnqueueRejected(command_id, response)
         return {
             "command_id": command_id,
             "shape": event.label,

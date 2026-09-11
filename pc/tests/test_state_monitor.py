@@ -39,7 +39,8 @@ def _state(*, station: str = "idle", queue_length: int = 0) -> dict[str, object]
             "front": front,
             "queue": [] if front is None else [front],
             "last_key": "KEY2" if queue_length else None,
-            "last_sort": {"branch": "Branch1"} if queue_length else None,
+            "last_sort": {"sequence": 4, "branch": "Branch1"} if queue_length else None,
+            "last_transition": "waiting" if queue_length else "idle",
         },
     }
 
@@ -60,6 +61,7 @@ class FakeClient:
         self.close_calls = 0
         self.heartbeat_calls = 0
         self.state_calls = 0
+        self.transport_connected = False
 
     def start(self) -> None:
         self.start_calls += 1
@@ -74,6 +76,10 @@ class FakeClient:
     def request_pipeline_state(self) -> Future:
         self.state_calls += 1
         return self.states.pop(0)
+
+    def wait_connected(self, timeout: float) -> bool:
+        assert timeout == 0.0
+        return self.transport_connected
 
 
 def test_parse_pipeline_state_normalizes_existing_controller_response() -> None:
@@ -110,13 +116,16 @@ def test_heartbeat_failure_maps_offline_then_next_ack_returns_online() -> None:
     first = monitor.poll()
     assert first is not None
     assert first.connection is ConnectionStatus.OFFLINE
+    assert first.transport is ConnectionStatus.OFFLINE
     assert first.pipeline is not None
     assert client.start_calls == 1
 
     clock.now = 1.0
+    client.transport_connected = True
     second = monitor.poll()
     assert second is not None
     assert second.connection is ConnectionStatus.ONLINE
+    assert second.transport is ConnectionStatus.ONLINE
     assert client.heartbeat_calls == 2
 
 

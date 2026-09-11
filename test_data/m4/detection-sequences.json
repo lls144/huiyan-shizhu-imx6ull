@@ -51,19 +51,41 @@
     },
     {
       "name": "true_removal",
-      "description": "Four missing frames exceed tolerance and emit one EXIT.",
+      "description": "Twenty-six missing frames exceed the confirmed-object occlusion grace and emit one EXIT.",
       "frames": [
         {"frame_index": 0, "detections": [{"label": "circle", "confidence": 0.96, "bbox": [100, 100, 100, 100]}]},
         {"frame_index": 1, "detections": [{"label": "circle", "confidence": 0.96, "bbox": [100, 100, 100, 100]}]},
         {"frame_index": 2, "detections": []},
         {"frame_index": 3, "detections": []},
         {"frame_index": 4, "detections": []},
-        {"frame_index": 5, "detections": []}
+        {"frame_index": 5, "detections": []},
+        {"frame_index": 6, "detections": []},
+        {"frame_index": 7, "detections": []},
+        {"frame_index": 8, "detections": []},
+        {"frame_index": 9, "detections": []},
+        {"frame_index": 10, "detections": []},
+        {"frame_index": 11, "detections": []},
+        {"frame_index": 12, "detections": []},
+        {"frame_index": 13, "detections": []},
+        {"frame_index": 14, "detections": []},
+        {"frame_index": 15, "detections": []},
+        {"frame_index": 16, "detections": []},
+        {"frame_index": 17, "detections": []},
+        {"frame_index": 18, "detections": []},
+        {"frame_index": 19, "detections": []},
+        {"frame_index": 20, "detections": []},
+        {"frame_index": 21, "detections": []},
+        {"frame_index": 22, "detections": []},
+        {"frame_index": 23, "detections": []},
+        {"frame_index": 24, "detections": []},
+        {"frame_index": 25, "detections": []},
+        {"frame_index": 26, "detections": []},
+        {"frame_index": 27, "detections": []}
       ],
       "expected": {
         "events": [
           {"event_type": "OBJECT_ENTER", "object_id": 1, "label": "circle", "frame_index": 1},
-          {"event_type": "OBJECT_EXIT", "object_id": 1, "label": "circle", "frame_index": 5}
+          {"event_type": "OBJECT_EXIT", "object_id": 1, "label": "circle", "frame_index": 27}
         ],
         "active_object_ids": []
       }
@@ -78,14 +100,36 @@
         {"frame_index": 3, "detections": []},
         {"frame_index": 4, "detections": []},
         {"frame_index": 5, "detections": []},
-        {"frame_index": 6, "detections": [{"label": "circle", "confidence": 0.97, "bbox": [101, 100, 100, 100]}]},
-        {"frame_index": 7, "detections": [{"label": "circle", "confidence": 0.97, "bbox": [101, 100, 100, 100]}]}
+        {"frame_index": 6, "detections": []},
+        {"frame_index": 7, "detections": []},
+        {"frame_index": 8, "detections": []},
+        {"frame_index": 9, "detections": []},
+        {"frame_index": 10, "detections": []},
+        {"frame_index": 11, "detections": []},
+        {"frame_index": 12, "detections": []},
+        {"frame_index": 13, "detections": []},
+        {"frame_index": 14, "detections": []},
+        {"frame_index": 15, "detections": []},
+        {"frame_index": 16, "detections": []},
+        {"frame_index": 17, "detections": []},
+        {"frame_index": 18, "detections": []},
+        {"frame_index": 19, "detections": []},
+        {"frame_index": 20, "detections": []},
+        {"frame_index": 21, "detections": []},
+        {"frame_index": 22, "detections": []},
+        {"frame_index": 23, "detections": []},
+        {"frame_index": 24, "detections": []},
+        {"frame_index": 25, "detections": []},
+        {"frame_index": 26, "detections": []},
+        {"frame_index": 27, "detections": []},
+        {"frame_index": 28, "detections": [{"label": "circle", "confidence": 0.97, "bbox": [101, 100, 100, 100]}]},
+        {"frame_index": 29, "detections": [{"label": "circle", "confidence": 0.97, "bbox": [101, 100, 100, 100]}]}
       ],
       "expected": {
         "events": [
           {"event_type": "OBJECT_ENTER", "object_id": 1, "label": "circle", "frame_index": 1},
-          {"event_type": "OBJECT_EXIT", "object_id": 1, "label": "circle", "frame_index": 5},
-          {"event_type": "OBJECT_ENTER", "object_id": 2, "label": "circle", "frame_index": 7}
+          {"event_type": "OBJECT_EXIT", "object_id": 1, "label": "circle", "frame_index": 27},
+          {"event_type": "OBJECT_ENTER", "object_id": 2, "label": "circle", "frame_index": 29}
         ],
         "active_object_ids": [2]
       }
@@ -187,16 +231,38 @@
         {"frame_index": 2, "detections": []},
         {"frame_index": 3, "detections": []},
         {"frame_index": 4, "detections": []},
-        {"frame_index": 5, "detections": []}
+        {"frame_index": 5, "detections": []},
+        {"frame_index": 6, "detections": []},
+        {"frame_index": 7, "detections": []},
+        {"frame_index": 8, "detections": []},
+        {"frame_index": 9, "detections": []},
+        {"frame_index": 10, "detections": []},
+        {"frame_index": 11, "detections": []},
+        {"frame_index": 12, "detections": []},
+        {"frame_index": 13, "detections": []},
+        {"frame_index": 14, "detections": []},
+        {"frame_index": 15, "detections": []},
+        {"frame_index": 16, "detections": []},
+        {"frame_index": 17, "detections": []},
+        {"frame_index": 18, "detections": []},
+        {"frame_index": 19, "detections": []},
+        {"frame_index": 20, "detections": []},
+        {"frame_index": 21, "detections": []},
+        {"frame_index": 22, "detections": []},
+        {"frame_index": 23, "detections": []},
+        {"frame_index": 24, "detections": []},
+        {"frame_index": 25, "detections": []},
+        {"frame_index": 26, "detections": []},
+        {"frame_index": 27, "detections": []}
       ],
       "expected": {
         "events": [
           {"event_type": "OBJECT_ENTER", "object_id": 1, "label": "triangle", "frame_index": 1},
           {"event_type": "OBJECT_ENTER", "object_id": 2, "label": "rectangle", "frame_index": 1},
           {"event_type": "OBJECT_ENTER", "object_id": 3, "label": "circle", "frame_index": 1},
-          {"event_type": "OBJECT_EXIT", "object_id": 1, "label": "triangle", "frame_index": 5},
-          {"event_type": "OBJECT_EXIT", "object_id": 2, "label": "rectangle", "frame_index": 5},
-          {"event_type": "OBJECT_EXIT", "object_id": 3, "label": "circle", "frame_index": 5}
+          {"event_type": "OBJECT_EXIT", "object_id": 1, "label": "triangle", "frame_index": 27},
+          {"event_type": "OBJECT_EXIT", "object_id": 2, "label": "rectangle", "frame_index": 27},
+          {"event_type": "OBJECT_EXIT", "object_id": 3, "label": "circle", "frame_index": 27}
         ],
         "active_object_ids": []
       }

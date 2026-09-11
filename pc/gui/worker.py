@@ -16,6 +16,7 @@ from pc.events.adapters import detections_from_analysis
 from pc.events.config import EventConfig
 from pc.events.models import VisionEvent
 from pc.events.tracker import ObjectStateManager
+from pc.communication.vision_dispatcher import VisionEventDispatcher
 from pc.vision.config import VisionConfig
 from pc.vision.m3_live import analyze_preprocess_modes, save_m3_comparison_evidence
 from pc.vision.pipeline import MultiImageAnalysis, analyze_multiple_objects
@@ -95,6 +96,7 @@ class VisionWorker(QObject):
         evidence_root: Path,
         expected_labels: Sequence[str],
         analyzer: Analyzer = analyze_multiple_objects,
+        event_dispatcher: VisionEventDispatcher | None = None,
     ) -> None:
         super().__init__()
         self.source = source
@@ -105,6 +107,7 @@ class VisionWorker(QObject):
         self.evidence_root = evidence_root
         self.expected_labels = tuple(expected_labels)
         self.analyzer = analyzer
+        self.event_dispatcher = event_dispatcher
 
     @Slot()
     def run(self) -> None:
@@ -136,6 +139,9 @@ class VisionWorker(QObject):
                 analysis = self.analyzer(frame, self.vision_config, self.source.roi)
                 detections = detections_from_analysis(analysis, frames_processed)
                 update = manager.process_frame(frames_processed, detections)
+                if self.event_dispatcher is not None:
+                    for event in update.events:
+                        self.event_dispatcher.submit(event)
                 annotated = annotated_gui_frame(
                     frame,
                     analysis,

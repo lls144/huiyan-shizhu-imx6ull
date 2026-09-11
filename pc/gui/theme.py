@@ -130,6 +130,9 @@ QLabel#boardStateValue {{ color: {tokens.text}; font-size: 11px; font-family: "C
 QLabel#boardStateValue[connection="online"] {{ color: {tokens.success}; }}
 QLabel#boardStateValue[connection="connecting"] {{ color: {tokens.warning}; }}
 QLabel#boardStateValue[connection="offline"] {{ color: {tokens.error}; }}
+QLabel#boardStateValue[enqueueOutcome="accepted"] {{ color: {tokens.success}; }}
+QLabel#boardStateValue[enqueueOutcome="failed"] {{ color: {tokens.error}; }}
+QWidget#digitalSortingLine {{ border-top: 1px solid {tokens.divider}; }}
 QFrame#divider {{ color: {tokens.divider}; background: {tokens.divider}; max-height: 1px; }}
 QToolButton {{
     min-height: {tokens.tool_height}px;
