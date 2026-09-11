@@ -11,5 +11,6 @@
 | LCD HMI | `device/imx6ull/hmi/` | TEST-012 | real LCD, Goodix touch and state recovery |
 | Cold start / final smoke | services + `final_smoke_check.sh` | TEST-013 | real power cycle, service recovery and final visual smoke |
 | RJ45 board persistence | `configure_demo_ethernet.sh` | deployment record | real `eth1` carrier, stable MAC, static board address and reboot recovery; Windows E2E remains TODO |
+| Windows RJ45 Python protocol smoke | `scripts/windows_controller_protocol_smoke.py` | TEST-014 | real Windows `ControllerClient` to `203.0.113.2:9000`: connect, heartbeat, state and reset PASS; retry fault path not injected |
 
 Runtime recordings under ignored `output/` are local evidence, not automatically committed artifacts. Test records state their evidence limits explicitly.
