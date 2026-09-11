@@ -273,8 +273,10 @@ class MainWindow(QMainWindow):
         board_grid.setHorizontalSpacing(10)
         board_grid.setVerticalSpacing(4)
         self.camera_connection_value = self._board_value("OFFLINE")
-        self.board_connection_value = self._board_value("CONNECTING")
+        self.ethernet_connection_value = self._board_value("CONNECTING")
         self.controller_connection_value = self._board_value("CONNECTING")
+        self.heartbeat_value = self._board_value("CONNECTING")
+        self.board_connection_value = self._board_value("CONNECTING")
         self.fifo_value = self._board_value("—/3")
         self.station_value = self._board_value("—")
         self.current_object_value = self._board_value("—")
@@ -283,8 +285,10 @@ class MainWindow(QMainWindow):
         self.last_enqueue_value = self._board_value("—")
         rows = (
             ("CAMERA", self.camera_connection_value),
+            ("ETHERNET", self.ethernet_connection_value),
+            ("CONTROLLER TCP", self.controller_connection_value),
+            ("HEARTBEAT", self.heartbeat_value),
             ("BOARD", self.board_connection_value),
-            ("CONTROLLER", self.controller_connection_value),
             ("FIFO", self.fifo_value),
             ("STATION", self.station_value),
             ("CURRENT OBJECT", self.current_object_value),
@@ -403,15 +407,24 @@ class MainWindow(QMainWindow):
         active = state in {GuiState.STARTING, GuiState.RUNNING, GuiState.STOPPING}
         self.start_button.setEnabled(not active)
         self.stop_button.setEnabled(state in {GuiState.STARTING, GuiState.RUNNING})
-        camera_running = self.source_type == "camera" and state == GuiState.RUNNING
+        camera_status = "OFFLINE"
+        if self.source_type == "camera" and state == GuiState.STARTING:
+            camera_status = "CONNECTING"
+        elif self.source_type == "camera" and state == GuiState.RUNNING:
+            camera_status = "ONLINE"
         for button in self.scenario_buttons:
-            button.setEnabled(camera_running)
-        self._set_camera_connection("ONLINE" if camera_running else "OFFLINE")
+            button.setEnabled(camera_status == "ONLINE")
+        self._set_camera_connection(camera_status)
 
     def _start_board_monitor(self) -> None:
         if self._board_monitor is None:
             self._apply_board_snapshot(
-                BoardMonitorSnapshot(ConnectionStatus.OFFLINE, None, "Board monitor is not configured")
+                BoardMonitorSnapshot(
+                    ConnectionStatus.OFFLINE,
+                    None,
+                    "Board monitor is not configured",
+                    ConnectionStatus.OFFLINE,
+                )
             )
             return
         self._apply_board_snapshot(self._board_monitor.start())
@@ -434,12 +447,17 @@ class MainWindow(QMainWindow):
         _set_dynamic_property(self.camera_connection_value, "connection", status.lower())
 
     def _apply_board_snapshot(self, snapshot: BoardMonitorSnapshot) -> None:
-        connection = snapshot.connection.value.upper()
-        self.board_connection_value.setText(connection)
-        self.controller_connection_value.setText(connection)
-        self.status_board_connection.setText(f"BOARD {connection}")
-        for value in (self.board_connection_value, self.controller_connection_value):
+        heartbeat = snapshot.connection.value.upper()
+        transport = snapshot.transport.value.upper()
+        self.board_connection_value.setText(heartbeat)
+        self.heartbeat_value.setText(heartbeat)
+        self.controller_connection_value.setText(transport)
+        self.ethernet_connection_value.setText(transport)
+        self.status_board_connection.setText(f"BOARD {heartbeat}")
+        for value in (self.board_connection_value, self.heartbeat_value):
             _set_dynamic_property(value, "connection", snapshot.connection.value)
+        for value in (self.controller_connection_value, self.ethernet_connection_value):
+            _set_dynamic_property(value, "connection", snapshot.transport.value)
         pipeline = snapshot.pipeline
         if pipeline is None:
             self.fifo_value.setText("—/3")

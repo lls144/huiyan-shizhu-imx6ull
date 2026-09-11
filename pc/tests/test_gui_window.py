@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QFrame
 from pc.events.config import EventConfig, load_event_config
 from pc.gui.models import GuiState
 from pc.gui.sources import SyntheticFrameSource
+from pc.communication.state_monitor import BoardMonitorSnapshot, ConnectionStatus
 from pc.gui.window import MainWindow, bgr_to_qimage
 from pc.vision.config import VisionConfig, load_vision_config
 from pc.vision.pipeline import analyze_multiple_objects
@@ -289,6 +290,68 @@ def test_source_failures_are_visible_and_recoverable(
     _wait_until(qt_app, lambda: attempts == 2 and window.state == GuiState.IDLE)
     assert window.last_session_summary["error"] is None  # type: ignore[index]
     assert window.state == GuiState.IDLE
+    window.close()
+
+
+def test_camera_start_failure_leaves_health_window_open_for_retry(
+    qt_app: QApplication, tmp_path: Path
+) -> None:
+    window = MainWindow(
+        source_factory=lambda: OpenFailureSource([NORMAL_IMAGE]),
+        source_type="camera",
+        vision_config=VISION_CONFIG,
+        event_config=EVENT_CONFIG,
+        session_dir=tmp_path / "sessions",
+        evidence_root=tmp_path / "evidence",
+        expected_labels=("triangle", "rectangle", "circle"),
+        analyzer=analyze_multiple_objects,
+    )
+    window.show()
+    window.start_session()
+    _wait_until(qt_app, lambda: window.state == GuiState.ERROR and not window.is_running)
+
+    assert window.isVisible()
+    assert window.camera_connection_value.text() == "OFFLINE"
+    assert window.board_connection_value.text() == "OFFLINE"
+    assert window.controller_connection_value.text() == "OFFLINE"
+    window.close()
+
+
+def test_camera_starting_and_running_health_states(qt_app: QApplication, tmp_path: Path) -> None:
+    window = MainWindow(
+        source_factory=lambda: SequenceSource([NORMAL_IMAGE], loop=True),
+        source_type="camera",
+        vision_config=VISION_CONFIG,
+        event_config=EVENT_CONFIG,
+        session_dir=tmp_path / "sessions",
+        evidence_root=tmp_path / "evidence",
+        expected_labels=("triangle", "rectangle", "circle"),
+        analyzer=analyze_multiple_objects,
+    )
+    window.show()
+    window.start_session()
+    assert window.camera_connection_value.text() in {"CONNECTING", "ONLINE"}
+    _wait_until(qt_app, lambda: window.state == GuiState.RUNNING)
+
+    assert window.camera_connection_value.text() == "ONLINE"
+    window.stop_session(block=True)
+    _wait_until(qt_app, lambda: not window.is_running)
+    window.close()
+
+
+def test_board_health_rows_distinguish_tcp_transport_from_heartbeat(
+    qt_app: QApplication, tmp_path: Path
+) -> None:
+    window = _window(tmp_path, lambda: SequenceSource([NORMAL_IMAGE]))
+    window._apply_board_snapshot(
+        BoardMonitorSnapshot(ConnectionStatus.OFFLINE, None, "heartbeat timed out", ConnectionStatus.ONLINE)
+    )
+    qt_app.processEvents()
+
+    assert window.ethernet_connection_value.text() == "ONLINE"
+    assert window.controller_connection_value.text() == "ONLINE"
+    assert window.heartbeat_value.text() == "OFFLINE"
+    assert window.board_connection_value.text() == "OFFLINE"
     window.close()
 
 

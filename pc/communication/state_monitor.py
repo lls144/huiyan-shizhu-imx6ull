@@ -59,6 +59,7 @@ class BoardMonitorSnapshot:
     connection: ConnectionStatus
     pipeline: PipelineState | None
     error: str | None
+    transport: ConnectionStatus = ConnectionStatus.CONNECTING
 
 
 @dataclass
@@ -181,6 +182,7 @@ class BoardStateMonitor:
         self._request_timeout = request_timeout
         self._clock = clock
         self._connection = ConnectionStatus.CONNECTING
+        self._transport = ConnectionStatus.CONNECTING
         self._pipeline: PipelineState | None = None
         self._error: str | None = None
         self._heartbeat: _PendingRequest | None = None
@@ -191,7 +193,7 @@ class BoardStateMonitor:
 
     @property
     def snapshot(self) -> BoardMonitorSnapshot:
-        return BoardMonitorSnapshot(self._connection, self._pipeline, self._error)
+        return BoardMonitorSnapshot(self._connection, self._pipeline, self._error, self._transport)
 
     def start(self) -> BoardMonitorSnapshot:
         if not self._started:
@@ -222,7 +224,37 @@ class BoardStateMonitor:
             self._state = self._submit(self._client.request_pipeline_state, now, "pipeline_state")
             self._next_state = now + self._state_interval
             changed = self._collect_state(now) or changed
+        changed = self._refresh_transport() or changed
         return self.snapshot if changed or self.snapshot != before else None
+
+    def _refresh_transport(self) -> bool:
+        """Read ControllerClient's socket event without waiting in the GUI thread.
+
+        The transport state is presentation-only health data.  BOARD/CONTROLLER
+        online remains governed by the validated heartbeat ACK in
+        ``_collect_heartbeat``.
+        """
+
+        wait_connected = getattr(self._client, "wait_connected", None)
+        if callable(wait_connected):
+            try:
+                connected = bool(wait_connected(0.0))
+            except Exception:
+                connected = False
+            next_status = (
+                ConnectionStatus.ONLINE
+                if connected
+                else (
+                    ConnectionStatus.OFFLINE
+                    if self._connection is ConnectionStatus.OFFLINE
+                    else ConnectionStatus.CONNECTING
+                )
+            )
+        else:
+            next_status = self._connection
+        changed = next_status is not self._transport
+        self._transport = next_status
+        return changed
 
     def _submit(
         self, request: Callable[[], Future], now: float, label: str
