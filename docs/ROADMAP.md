@@ -63,7 +63,7 @@
 - **验收标准**：可脚本化重现正常、满队列、丢包/延迟和心跳中断场景；行为与协议草案一致。
 - **所需真实硬件**：无。
 - **是否可在宿舍完成**：是。
-- **当前状态**：DONE。2026-09-05 明确授权后完成协议无关模型、FIFO、设备侧重复保护、虚拟毫秒时钟、内存链路、确定性故障计划和 M4 实际事件集成。16/16 CLI 场景及逐字段重放通过，62 项 M6 测试、172 项全量测试通过。证据见 TEST-007、`evidence/data/m6/`。本阶段只证明软件模拟语义；后续 i.MX6ULL Controller M7/M8 已另行完成，M9 输出与共享 PLC 接口仍未完成。
+- **当前状态**：DONE。2026-09-05 明确授权后完成协议无关模型、FIFO、设备侧重复保护、虚拟毫秒时钟、内存链路、确定性故障计划和 M4 实际事件集成。16/16 CLI 场景及逐字段重放通过，62 项 M6 测试、172 项全量测试通过。证据见 TEST-007、`evidence/data/m6/`。本阶段只证明软件模拟语义；后续 i.MX6ULL Controller M7–M10 已另行完成，但共享 PLC 接口及原始 PLC 路线仍未完成。
 
 ## M7 PC–Controller TCP 通信 — DONE
 
@@ -87,7 +87,7 @@
 - **实现任务**：部署控制器服务，接入 GPIO 按键和分支控制所需 I/O；记录 UART 调试、网络、引脚与构建环境。
 - **验收标准**：目标板可重复部署和运行；按键输入与 GPIO 输出有真实硬件记录，不把主机模拟结果标为板端验证。
 - **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
-- **当前状态**：DONE。2026-09-10/11 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` TCP smoke、实体 KEY1/2/3 和 `gpio-keys` input。受限 root helper 通过 Linux LED class 驱动官方 RGB LED；普通 `debian` Controller 经 Unix socket 完成三类实体按键/FSM/LED 闭环，自动全灭与 reset 后全灭均有记录。2026-09-11，Ubuntu Ace Pro 2 经 `/dev/video2` 真实视觉产生 M4 ENTER，三类结果均经 TCP `accepted` 到实体 FIFO，再由实体键完成 Branch1/2/3 与 RGB 观察、自动熄灭和 dequeue（TEST-011）。应用不硬编码 `eventX`，不抢占 LED GPIO。见 `docs/IMX6ULL_DEPLOYMENT.md`、TEST-008～TEST-011。原始 PLC 路线不因此关闭；M10 仍为 TODO。
+- **当前状态**：DONE。2026-09-10/11 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` TCP smoke、实体 KEY1/2/3 和 `gpio-keys` input。受限 root helper 通过 Linux LED class 驱动官方 RGB LED；普通 `debian` Controller 经 Unix socket 完成三类实体按键/FSM/LED 闭环，自动全灭与 reset 后全灭均有记录。2026-09-11，Ubuntu Ace Pro 2 经 `/dev/video2` 真实视觉产生 M4 ENTER，三类结果均经 TCP `accepted` 到实体 FIFO，再由实体键完成 Branch1/2/3 与 RGB 观察、自动熄灭和 dequeue（TEST-011）。应用不硬编码 `eventX`，不抢占 LED GPIO。见 `docs/IMX6ULL_DEPLOYMENT.md`、TEST-008～TEST-011。原始 PLC 路线不因此关闭；M10 已由 TEST-012 完成。
 
 ## M10 Qt LCD HMI — DONE
 

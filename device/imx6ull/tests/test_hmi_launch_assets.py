@@ -41,3 +41,39 @@ class HmiLaunchAssetTests(unittest.TestCase):
         self.assertIn("ExecStart=/home/debian/huiyan-shizhu/device/imx6ull/scripts/start_hmi.sh", source)
         self.assertIn("Restart=on-failure", source)
         self.assertIn("WantedBy=graphical.target", source)
+        self.assertIn("huiyan-controller.service", source)
+
+    def test_controller_service_uses_existing_unprivileged_entrypoint(self):
+        source = (ROOT / "systemd" / "huiyan-controller.service").read_text(encoding="utf-8")
+        for required in (
+            "User=debian",
+            "Group=debian",
+            "SupplementaryGroups=input huiyan-led",
+            "WorkingDirectory=/home/debian/huiyan-shizhu",
+            "--mode imx6ull",
+            "--host 0.0.0.0",
+            "After=network-online.target huiyan-led-helper.service",
+            "Restart=on-failure",
+            "WantedBy=multi-user.target",
+        ):
+            self.assertIn(required, source)
+        self.assertNotIn("<controller-user>", source)
+
+    def test_final_smoke_is_read_only_and_covers_field_readiness(self):
+        source = (ROOT / "scripts" / "final_smoke_check.sh").read_text(encoding="utf-8")
+        for required in (
+            "systemctl is-active --quiet huiyan-controller.service",
+            "TCP heartbeat",
+            "FIFO idle/empty",
+            "huiyan-led-helper.service",
+            "/sys/class/leds/$led/brightness",
+            "huiyan-hmi.service",
+            "QT_QPA_PLATFORM=linuxfb:fb=/dev/fb0",
+            "Name=\"huiyan-keys\"",
+            "Goodix Capacitive TouchScreen",
+            "huiyan-keys.dtbo",
+            "OVERALL ............ PASS",
+        ):
+            self.assertIn(required, source)
+        for forbidden in ("request_reset", ".enqueue(", "handle_key(", "> /sys/class/leds"):
+            self.assertNotIn(forbidden, source)

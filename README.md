@@ -16,20 +16,25 @@ Camera
   -> i.MX6ULL Controller
   -> FIFO
   -> Pipeline State Machine
-  -> GPIO Keys
-  -> Branch Sorting
-  -> LCD HMI
+  -> Linux input / physical keys
+  -> Branch sorting
+  -> restricted LED helper
+  -> RGB LED
+
+LCD HMI
+  -> localhost Controller TCP state/reset
+  -> 800x480 LCD / Goodix touch
 ```
 
 原始任务要求与已完成证据见 [项目需求规格](docs/PROJECT_SPEC.md)；控制器路线调整依据见 [DECISION-IMX6ULL-001](docs/decisions/DECISION-IMX6ULL-001.md)。
 
 ## 控制器职责划分
 
-PC 负责摄像头、OpenCV 识别、目标生命周期、PySide6 GUI 和 TCP client。i.MX6ULL 负责指令接收、FIFO 缓存、三级流水线状态机、GPIO 按键输入、分支控制、Qt LCD HMI、heartbeat、ACK 与状态反馈。
+PC 负责 Ace Pro 2 摄像头、OpenCV 识别、目标生命周期、PySide6 GUI 和 TCP client。i.MX6ULL 负责 TCP 指令接收、FIFO 缓存、三级流水线状态机、Linux input 实体按键、分支结果、受限 RGB LED helper 与 Qt LCD HMI；不在板端运行 OpenCV 或 AI。HMI 仅经 localhost Controller TCP API 查询状态和触发既有 RESET 语义，不直接访问 FIFO、GPIO、LED 或 input。
 
 ## 当前状态
 
-- M1–M6 是已完成并保留的 PC 视觉、事件、GUI 和 Fake PLC 基线。i.MX6ULL Controller 路线的 M7 TCP、M8 FIFO/三级 Pipeline FSM、M9 实体三按键、受限 RGB LED 输出/FSM 和 PC vision 端到端闭环均有实机证据；原始 PLC 路线仍不因此完成。
+- M1–M6 是已完成并保留的 PC 视觉、事件、GUI 和 Fake PLC 基线。i.MX6ULL Controller 路线的 M7 TCP、M8 FIFO/三级 Pipeline FSM、M9 实体三按键/受限 RGB LED/PC vision 端到端闭环及 M10 LCD HMI/Goodix RESET 均有实机证据；原始 PLC 路线仍不因此完成。
 - 10 张真实离线图片回归与两种机位下共 8 项 Insta360 实时摄像头验收均通过；实时证据见 `TEST-003` 和 `evidence/screenshots/m2/live/`。
 - 实时入口复用 M1 的设备选择和 `open_configured_camera`，没有复制第二套摄像头管理逻辑。
 - M3 已用 Insta360 对正常、较亮/侧光、较暗、部分遮挡和接触/粘连 5 个真实场景完成 Otsu / CLAHE+Otsu 同帧审计。前三种光照两种方法均完整识别三类；遮挡输出 `circle + unknown + triangle`，接触输出 `unknown + triangle`，失败样例已保留。默认方案继续使用更简单的 Otsu。
@@ -37,6 +42,8 @@ PC 负责摄像头、OpenCV 识别、目标生命周期、PySide6 GUI 和 TCP cl
 - M5 已完成 1577.142974 秒 Insta360 GUI 真实运行：46235/46235 帧，processing/GUI 均为 29.315668 FPS，0 failed read、0 error，Stop 后 clean shutdown。auto ROI 未找到合格区域后 manual ROI 成功并锁定。
 - M6 Fake PLC 已完成纯离线验收（16 场景、确定性故障重放、M4 集成）；其语义命令、FIFO、ACK、心跳和故障注入边界可供新路线设计复用，但不代表真实 TCP 或 i.MX6ULL 控制器已实现。
 - 所有尚无真实测试证据的结果均标记为 `TODO` 或“待测试”。
+
+现场自检、三类形状演示、FIFO、错误按键、触摸 RESET 与安全关机步骤见 [i.MX6ULL 演示 Runbook](docs/DEMO_RUNBOOK.md)。
 
 ## 项目目录结构
 
@@ -50,7 +57,7 @@ pc/                    已完成的 PC 端视觉、事件与 PySide6 GUI；后�
   tests/               PC 端单元/集成测试
 plc/                   Historical PLC implementation; not current controller target
 simulator/             Fake PLC 模拟器（可复用语义/故障模型）
-device/imx6ull/        i.MX6ULL 控制器目录（当前仅目录规划）
+device/imx6ull/        i.MX6ULL Controller、input、LED helper client、LCD HMI 与部署脚本
 tests/                 系统级测试
 test_data/             小型可提交测试数据；raw/ 被忽略
 docs/                  需求、路线图、环境与报告证据链
@@ -83,7 +90,7 @@ Development:
 - ARM cross compilation
 - Qt
 
-硬件型号、引脚、交叉工具链、LCD 型号和网络参数尚未在本阶段冻结或实现。
+已验收板端为野火 i.MX6ULL（Debian 10 / Python 3.7.3）；LCD 为 `/dev/fb0`、800×480，HMI 使用 PySide2 5.11.2 / Qt 5.11.3 的 `linuxfb` backend。板端不跑视觉模型。详细部署与硬件事实见 [i.MX6ULL 部署记录](docs/IMX6ULL_DEPLOYMENT.md)。
 
 ## 如何开始
 
@@ -131,7 +138,7 @@ Development:
 | M7 | PC–Controller TCP 通信 | DONE（真实 i.MX6ULL TCP smoke 10/10 PASS） |
 | M8 | FIFO 与三级流水线状态机 | DONE（FIFO/FSM 回归及实体按键闭环通过） |
 | M9 | i.MX6ULL 部署与 GPIO | DONE（PC vision → TCP → 实体按键/FSM → RGB LED 三类 E2E PASS；TEST-011） |
-| M10 | Qt LCD HMI | TODO |
+| M10 | Qt LCD HMI | DONE（800×480 LCD、Goodix touch RESET、动态 HMI 验收 PASS；TEST-012） |
 | M11 | 可靠性机制（heartbeat、ACK、重试与状态反馈） | TODO |
 | M12 | 真实视觉到实体控制器闭环 | TODO |
 

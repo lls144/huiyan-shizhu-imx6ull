@@ -1,6 +1,6 @@
 # i.MX6ULL Controller Deployment and M9/M10 Verification
 
-状态：**M9 DONE（批准的 i.MX6ULL Controller 路线）**。已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证、三枚实体按键到 Controller FSM、板载 RGB LED 的受限 helper 与实体按键/FSM/LED 闭环，以及 PC 摄像头视觉至实体 LED 的三类端到端验收。该结论不关闭原始 PLC 路线或 M10。
+状态：**M9 DONE、M10 DONE（批准的 i.MX6ULL Controller 路线）**。已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证、三枚实体按键到 Controller FSM、板载 RGB LED 的受限 helper 与实体按键/FSM/LED 闭环、PC 摄像头视觉至实体 LED 的三类端到端验收，以及 LCD Qt HMI/Goodix touch RESET 验收。该结论不关闭原始 PLC 路线。
 
 ## Deployment baseline
 
@@ -160,7 +160,7 @@ Test record: `notes/tests/TEST-011-M9-PC视觉至实体LED端到端验收.md`. T
 | circle | 0.977329 / 14010 | KEY1 → Station2 (off), KEY2 → Branch2 → red+green about 1 s → off → dequeue | PASS |
 | rectangle | 0.979300 / 14020 | KEY1 → Station2 (off), KEY2 → Station3 (off), KEY3 → Branch3 → red+green+blue about 1 s → off → dequeue | PASS |
 
-The same session also rechecked a wrong physical station (no state change/no LED), TCP reset (idle/empty/all LEDs off), heartbeat and new-client reconnect. Controller remained an ordinary `debian` process on `0.0.0.0:9000`; the root helper remained active and had no error entries in the E2E interval. This completes M9 for this approved Controller route. A persistent ordinary-user Controller service is a future operational improvement, not an untested M9 acceptance requirement.
+The same session also rechecked a wrong physical station (no state change/no LED), TCP reset (idle/empty/all LEDs off), heartbeat and new-client reconnect. Controller remained an ordinary `debian` process on `0.0.0.0:9000`; the root helper remained active and had no error entries in the E2E interval. This completes M9 for this approved Controller route. The later cold-start record installs the same ordinary-user Controller process as `huiyan-controller.service`.
 
 ## 2026-09-11 M10 LCD Qt HMI — PASS
 
@@ -172,3 +172,12 @@ Test record: `notes/tests/TEST-012-M10-iMX6ULL-LCD-HMI验收.md`.
 - `huiyan-hmi.service` runs as ordinary `debian` with the `input` supplementary group, starts after basic networking and the LED helper, and delegates all single-instance protection to the same launcher.  The HMI only uses `127.0.0.1:9000`; it does not access GPIO, LED sysfs, FIFO internals or `/dev/input` itself.
 - The vendor `ebf-qtdemo.service` was identified as the auto-start source for `/usr/local/qt-app/run.sh` and `/usr/local/qt-app/App`.  It was disabled reversibly; neither the vendor directory nor binary was modified.  Its historical `failed` state is not a running process.
 - Physical LCD display, real `/dev/input` tslib touch RESET, three true camera/M4/TCP enqueue paths, physical key/FSM/LED routing, ordered 3/3 FIFO, wrong-key retention, and an observable Controller OFFLINE→ONLINE recovery all passed.  The HMI stayed a single ordinary-user process and the vendor Demo process was absent.
+
+## 2026-09-11 cold-start and final field smoke — PASS
+
+Test record: `notes/tests/TEST-013-iMX6ULL最终冷启动与演示冒烟验收.md`.
+
+- `huiyan-controller.service` now runs the established Controller entry point as ordinary user `debian`, with `input` and `huiyan-led` supplementary groups, working directory `/home/debian/huiyan-shizhu`, verified configuration and `--host 0.0.0.0`.  It starts after network and the root-owned LED helper.  `huiyan-hmi.service` starts after the Controller and helper; neither service runs as root.
+- `device/imx6ull/scripts/final_smoke_check.sh` is read-only.  It checks service state, port 9000, TCP heartbeat, an idle empty FIFO, helper socket and RGB-off brightness, one HMI process using linuxfb 800×480, `huiyan-keys`, Goodix, expected overlay lines and disabled vendor Demo.  It never resets, enqueues, touches GPIO or writes LED brightness.
+- After a real `sudo poweroff`, physical re-power and USB Gadget/SSH recovery, no manual Controller/HMI/helper command was issued.  All three services came up enabled and active, Controller listened on `0.0.0.0:9000`, and final smoke returned `OVERALL PASS`.  The operator then observed the HUIYAN page and operated its Goodix RESET successfully.
+- The final minimal real vision smoke repeated Ace Pro 2 `/dev/video2` V4L2/MJPG 1920×1080@30 through M4 `OBJECT_ENTER` / Controller accepted / physical key pipeline for all three branches.  A controlled `huiyan-controller.service` stop showed HMI OFFLINE without an HMI crash; after service start the operator observed ONLINE and final smoke passed again.

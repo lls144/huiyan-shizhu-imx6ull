@@ -1,14 +1,16 @@
 [Unit]
-Description=Huiyan i.MX6ULL controller (template)
-After=network-online.target
-Wants=network-online.target
+Description=Huiyan i.MX6ULL controller
+After=network-online.target huiyan-led-helper.service
+Wants=network-online.target huiyan-led-helper.service
 
 [Service]
 Type=simple
-User=<controller-user>
-WorkingDirectory=<project-directory>
-Environment=PYTHONPATH=<project-directory>
-ExecStart=/usr/bin/python3 -m device.imx6ull.controller_main --mode imx6ull --config <controller-config-path>
+User=debian
+Group=debian
+SupplementaryGroups=input huiyan-led
+WorkingDirectory=/home/debian/huiyan-shizhu
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m device.imx6ull.controller_main --mode imx6ull --config /home/debian/huiyan-shizhu/device/imx6ull/config/controller.json --host 0.0.0.0
 Restart=on-failure
 RestartSec=2
 

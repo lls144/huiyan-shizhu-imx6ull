@@ -1,7 +1,7 @@
 [Unit]
 Description=Huiyan i.MX6ULL LCD HMI
-After=network-online.target huiyan-led-helper.service
-Wants=network-online.target
+After=network-online.target huiyan-led-helper.service huiyan-controller.service
+Wants=network-online.target huiyan-led-helper.service huiyan-controller.service
 
 [Service]
 Type=simple
