@@ -12,5 +12,6 @@
 | Cold start / final smoke | services + `final_smoke_check.sh` | TEST-013 | real power cycle, service recovery and final visual smoke |
 | RJ45 board persistence | `configure_demo_ethernet.sh` | deployment record | real `eth1` carrier, stable MAC, static board address and reboot recovery; Windows E2E remains TODO |
 | Windows RJ45 Python protocol smoke | `scripts/windows_controller_protocol_smoke.py` | TEST-014 | real Windows `ControllerClient` to `203.0.113.2:9000`: connect, heartbeat, state and reset PASS; retry fault path not injected |
+| Windows GUI board-state monitor | `pc/communication/state_monitor.py` + `pc/gui/` | TEST-015 | real Windows Vision Console to `203.0.113.2:9000`: heartbeat-derived ONLINE and physical KEY1/2/3 state transitions shown in the Board State panel |
 
 Runtime recordings under ignored `output/` are local evidence, not automatically committed artifacts. Test records state their evidence limits explicitly.

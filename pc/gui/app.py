@@ -9,6 +9,8 @@ import tracemalloc
 from pathlib import Path
 from typing import Sequence
 
+from pc.communication.state_monitor import BoardStateMonitor
+from pc.communication.vision_bridge import load_controller_connection_config
 from pc.events.config import load_event_config
 from pc.vision.config import load_vision_config
 from pc.vision.pipeline import analyze_multiple_objects
@@ -22,6 +24,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--source", choices=("synthetic", "camera"), default="synthetic")
     parser.add_argument("--vision-config", type=Path, default=Path("pc/config/vision.json"))
     parser.add_argument("--event-config", type=Path, default=Path("pc/config/events.json"))
+    parser.add_argument(
+        "--controller-config",
+        type=Path,
+        default=Path("pc/config/controller_windows_ethernet.json"),
+        help="Windows RJ45 Controller profile used by the Board State monitor",
+    )
     parser.add_argument("--camera-config", type=Path, default=Path("pc/config/camera.json"))
     parser.add_argument(
         "--roi-mode", choices=("auto", "manual", "fixed_normalized"), default="auto"
@@ -63,6 +71,15 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     vision_config = load_vision_config(args.vision_config)
     event_config = load_event_config(args.event_config)
+    controller_connection = load_controller_connection_config(args.controller_config)
+    board_monitor = BoardStateMonitor(
+        controller_connection.make_client(),
+        request_timeout=(
+            controller_connection.connect_timeout
+            + controller_connection.ack_timeout * (controller_connection.max_retries + 1)
+            + controller_connection.reconnect_delay
+        ),
+    )
 
     if args.source == "synthetic":
         source_factory = lambda: SyntheticFrameSource(
@@ -91,6 +108,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         evidence_root=args.m3_evidence_dir,
         expected_labels=args.expected_labels,
         analyzer=analyze_multiple_objects,
+        board_monitor=board_monitor,
     )
     window.show()
     if not args.no_auto_start:
