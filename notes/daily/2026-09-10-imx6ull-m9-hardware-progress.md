@@ -7,6 +7,8 @@ status: m9-doing
 
 # 2026-09-10 i.MX6ULL M9 硬件进度收尾
 
+> 后续更新（2026-09-11）：本页记录的是当日结束时的只读 LED 审计，因此其中“未实施/未测试”仅描述该时点。受限 helper、实体 RGB LED、实体按键/FSM/LED 闭环的后续 PASS 证据见 `notes/tests/TEST-010-M9-iMX6ULL实体LED闭环验收.md`；M9 整体仍因 PC vision 端到端未验收而保持 DOING。
+
 ## 今日已完成且有实机证据
 
 - M7 PC–i.MX6ULL TCP 与 M8 FIFO/三级 Pipeline FSM：真实 `198.51.100.2:9000` smoke 10/10 PASS，覆盖 heartbeat、state、三类 enqueue、满队列、重复 ID、reset、顺序和 reconnect（TEST-008）。
