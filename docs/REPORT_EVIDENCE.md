@@ -74,7 +74,7 @@ M6 fault scenarios 可供未来 M7/M9 复用，仅为 supporting simulator avail
 | 范围 | 实现与版本 | Test / Daily | 证据 | 结论 |
 |---|---|---|---|---|
 | Python 3.7 Controller 与真实 TCP | `device/imx6ull/`、`pc/communication/protocol.py`；`9906133a6db4e5391704fadf3c3b94b0b893b765` | `notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md`；`notes/daily/2026-09-10-M9-iMX6ULL实机部署与TCP验证.md` | `docs/IMX6ULL_DEPLOYMENT.md` 记录板端环境、compileall、监听与 10 项真实 `198.51.100.2:9000` smoke 响应 | i.MX6ULL 软件部署/TCP PASS |
-| 实体 gpio-keys 三按键与 Controller FSM | `device/imx6ull/overlay/`、`LinuxInputKeyInput`；`468f7bb223efe97af1a76198bde7dc237ba14b3e` | `notes/tests/TEST-009-M9-iMX6ULL实体GPIO按键验收.md`；`notes/daily/2026-09-10-M9-iMX6ULL实体GPIO按键验收.md` | 板端 overlay、`gpioinfo`、`huiyan-keys` raw `/dev/input` log（148/149/202 的 press/release）及真实 TCP 上的物理 FSM 闭环 | GPIO 输入 PASS；输出硬件未测，M9 DOING |
-| 板载 LED 输出方案 | `imx-fire-led.dtbo` 的现有 red/green/blue LED class | `docs/IMX6ULL_DEPLOYMENT.md`；`notes/daily/2026-09-10-imx6ull-m9-hardware-progress.md` | 只读审计：映射、active-low、kernel ownership 与权限状态 | NOT YET VERIFIED；不是实体输出证据 |
+| 实体 gpio-keys 三按键与 Controller FSM | `device/imx6ull/overlay/`、`LinuxInputKeyInput`；`468f7bb223efe97af1a76198bde7dc237ba14b3e` | `notes/tests/TEST-009-M9-iMX6ULL实体GPIO按键验收.md`；`notes/daily/2026-09-10-M9-iMX6ULL实体GPIO按键验收.md` | 板端 overlay、`gpioinfo`、`huiyan-keys` raw `/dev/input` log（148/149/202 的 press/release）及真实 TCP 上的物理 FSM 闭环 | GPIO 输入 PASS；输出另见 TEST-010，M9 DOING |
+| 受限 LED helper 与实体按键/FSM/LED 闭环 | `device/imx6ull/output/`、`huiyan-led-helper.service`；`a8b54179ef16d85946407ae86d8cee9661b3744d` | `notes/tests/TEST-010-M9-iMX6ULL实体LED闭环验收.md`；`notes/daily/2026-09-11-M9-iMX6ULL实体LED闭环验收.md` | root helper socket/权限、普通用户 Controller、raw code 149/202、Branch3 约 996 ms brightness 序列、操作者 RGB 观察与真实 TCP state/reset | M9 输出子范围 PASS；完整 PC vision E2E 未测，M9 DOING |
 
-本条不是 PLC 证据，也不证明 GPIO 输出或完整视觉闭环；这些项目继续保持 TODO。
+本条不是 PLC 证据，也不证明完整 PC-vision 视觉闭环；这些原始 PLC/视觉端到端项目继续保持 TODO。

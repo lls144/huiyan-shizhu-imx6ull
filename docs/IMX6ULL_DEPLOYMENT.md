@@ -1,6 +1,6 @@
 # i.MX6ULL Controller Deployment and M9 Verification
 
-状态：**M9 DOING**。2026-09-10 已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证，以及三枚实体按键从 `gpio-keys` 到 Controller FSM 的验证。GPIO 分支输出硬件和完整实体执行链路尚未验证，故不能将 M9 整体标记为 DONE。
+状态：**M9 DOING**。已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证、三枚实体按键到 Controller FSM，以及板载 RGB LED 的受限 helper 与实体按键/FSM/LED 闭环。PC 视觉到实体 Controller 的完整端到端验收仍未执行，因此 M9 不能标记为 DONE。
 
 ## Deployment baseline
 
@@ -17,7 +17,7 @@
 | SSH | alias `imx6ull`, non-interactive public-key authentication |
 | input permission | `debian` is a member of group `input` (`id` includes `106(input)`), permitting reads of `/dev/input/event*` |
 | GPIO input | `gpiochip0` lines 24/25/26, active-low, verified through `gpio-keys` as `huiyan-keys` |
-| GPIO output | board-LED scheme audited only; no output implementation or physical test |
+| GPIO output | root-owned LED helper、Linux LED class 与实体按键/FSM/RGB LED 闭环 PASS；完整 PC vision E2E 待验收 |
 
 The earlier safe-deployment configuration had no GPIO number and remained `NOT_CONFIGURED`. After the real mapping and wiring were confirmed, the committed configuration uses only the verified Linux input device name `huiyan-keys` and input key codes; the application does not open GPIO chips or hard-code an `eventX` number.
 
@@ -40,13 +40,13 @@ IMX6ULL_HOST=imx6ull IMX6ULL_REMOTE_DIR=/home/debian/huiyan-shizhu \
   device/imx6ull/scripts/deploy.sh
 ```
 
-It creates the needed remote directories with SSH and transfers only this explicit 17-file runtime manifest with SCP:
+It creates the needed remote directories with SSH and transfers only the unprivileged Controller runtime manifest with SCP:
 
 - `device/__init__.py`, `device/imx6ull/{__init__.py,controller_main.py}`;
-- `device/imx6ull/config/`, `core/`, and `network/` Python sources plus `controller.json`;
+- `device/imx6ull/config/`, `core/`, `network/` and `output` client Python sources plus `controller.json`;
 - `pc/__init__.py` and `pc/communication/{__init__.py,protocol.py}`.
 
-It excludes tests, `.venv`, `__pycache__`, pytest caches, visual/GUI code, models, datasets, videos, evidence and documents. `compileall` may subsequently create board-local `__pycache__`; it was not transferred.
+It excludes tests, `.venv`, `__pycache__`, pytest caches, visual/GUI code, models, datasets, videos, evidence and documents. The privileged helper/service/config are deliberately installed through the separate audited root procedure below, never by this unprivileged transfer. `compileall` may subsequently create board-local `__pycache__`; it was not transferred.
 
 ## 2026-09-10 real-board verification
 
@@ -116,29 +116,42 @@ Exactly six EV_KEY records were captured: one press and one release for each key
 
 With the deployed controller listening on `0.0.0.0:9000`, real TCP commands enqueued triangle 301, circle 302 and rectangle 303. Physical keys then drove the existing FSM: KEY1 sorted triangle to Branch1; KEY1 then KEY2 sorted circle through Station2 to Branch2; and KEY1 then KEY2 then KEY3 sorted rectangle through Stations 2/3 to Branch3. The early out-of-order presses recorded `wrong_station` without changing FIFO order or corrupting state; the later correct presses completed all three items. A two-second held KEY1 yielded only one `empty` FSM input after the queue had drained; a rapid double press after enqueuing triangle 401 yielded exactly `sorted Branch1`, then `empty`. A final real-network TCP smoke test still passed all 10 checks, including reset and reconnect.
 
-## 2026-09-10 board-LED output audit — NOT YET VERIFIED
+## 2026-09-10 board-LED output audit — pre-implementation baseline
 
 This was a read-only board audit, not an output test. The enabled official `imx-fire-led.dtbo` already registers three independent `gpio-leds` with trigger `none`; it was not modified. The recommended future Branch display pattern is Branch1/triangle = red (one lamp), Branch2/circle = red + green (two lamps), and Branch3/rectangle = red + green + blue (three lamps), preserving the task's 1/2/3-lamp requirement.
 
 | LED | GPIO mapping | polarity | Linux interface | current implementation/test status |
 |---|---|---|---|---|
-| red | GPIO1_IO04, gpiochip0 line 4 | active-low | `/sys/class/leds/red/brightness` | audited only |
-| green | GPIO4_IO20, gpiochip3 line 20 | active-low | `/sys/class/leds/green/brightness` | audited only |
-| blue | GPIO4_IO19, gpiochip3 line 19 | active-low | `/sys/class/leds/blue/brightness` | audited only |
+| red | GPIO1_IO04, gpiochip0 line 4 | active-low | `/sys/class/leds/red/brightness` | physical helper output verified below |
+| green | GPIO4_IO20, gpiochip3 line 20 | active-low | `/sys/class/leds/green/brightness` | physical helper output verified below |
+| blue | GPIO4_IO19, gpiochip3 line 19 | active-low | `/sys/class/leds/blue/brightness` | physical helper output verified below |
 
-The future application must use the LED class and must not claim those kernel-owned lines through libgpiod. No new LED overlay is needed and `imx-fire-led.dtbo` must remain unchanged. At audit time, the brightness attributes were `root:root` mode `0644`, so the currently unprivileged Controller cannot yet write them. No LED helper, permission channel, systemd deployment, brightness write, 1/2/3-lamp observation, reset-all-off verification, or physical GPIO-output test has been implemented or performed.
+The application uses the LED class and never claims these kernel-owned lines through libgpiod. No new LED overlay was added and `imx-fire-led.dtbo` remains unchanged. The original brightness attributes were `root:root` mode `0644`, so an unprivileged Controller cannot write them directly; the later helper deployment below preserves that boundary.
+
+## 2026-09-10/11 restricted LED helper and physical output closure — PASS
+
+Test record: `notes/tests/TEST-010-M9-iMX6ULL实体LED闭环验收.md`. Implementation: `a8b54179ef16d85946407ae86d8cee9661b3744d`.
+
+- The helper runs as `root` in ordinary `huiyan-led-helper.service`, while Controller PID 2022 ran as ordinary user `debian`; Controller was never run as root.
+- Root-owned code is installed at `/opt/huiyan-led-helper`; root-only config `/etc/huiyan-led-helper.json` fixes `/run/huiyan-led/helper.sock`, mode `0660`, group `huiyan-led` and a 1000 ms duration. `debian` was added to that group. The runtime directory/socket were observed as `0750 root:huiyan-led` and `0660 root:huiyan-led`.
+- The initial mount-namespace hardening failed on this image with systemd `status=226/NAMESPACE`; it was removed because this kernel cannot establish the required namespace. The compatible unit retains root-owned immutable helper code/config, direct fixed `ExecStart` (no shell), `NoNewPrivileges`, `CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE`, `UMask=0007`, `RestrictAddressFamilies=AF_UNIX`, fixed paths and a strict branch/off protocol.
+- The repository `controller.json` remains safely disabled. Only the board runtime copy was backed up and changed to `led_output.enabled=true` for this supervised test; its backup is `/home/debian/huiyan-shizhu/device/imx6ull/config/controller.json.pre-led-enable-20260910T222433+0800`.
+
+Direct socket tests as ordinary `debian` passed: Branch1 set red only, Branch2 set red+green, Branch3 set all three, each automatically returned to all-zero; `OFF` returned all-zero; an invalid `gpio` message had no effect; service remained active. The single RGB package presents red, yellow-green (red+green) and blue-white (red+green+blue), which is the expected physical mixing of the required logical 1/2/3 channel patterns.
+
+The real Controller listened on `0.0.0.0:9000` as `debian`. From dev-host, TCP heartbeat and state passed; enqueue, wrong-station KEY2, ordinary KEY1 station movement and reset were checked without lighting any LED. This proves those non-sort paths do not produce a branch-output event.
+
+| Physical queue item | observed physical keys and Controller result | LED evidence | Result |
+|---|---|---|---|
+| triangle 9201 | KEY1 → `sorted Branch1`, FIFO length 0 | operator observed red; subsequently all brightness values were 0 | PASS |
+| circle 9202 | KEY3 → `wrong_station`; KEY1 → Station2; KEY2 (raw code 149 press/release) → `sorted Branch2` | operator observed yellow-green then auto-off | PASS |
+| rectangle 9203 | KEY1 → Station2; wrong keys preserved state; KEY2 (raw 149 press/release) → Station3; KEY3 (raw code 202 press/release) → `sorted Branch3` | sampler observed all three brightness values 255 from 12616 ms to 13612 ms (about 996 ms), then all 0; operator observed blue-white | PASS |
+| reset | real TCP reset returned empty/idle | red/green/blue all read 0 after reset | PASS |
+
+This closes the M9 board LED-output and entity-key/FSM/LED sub-scope. It is not evidence of PC vision to physical LED end-to-end operation, and it does not change the status of the original PLC requirements.
 
 ## Remaining M9 work
 
-1. Implement a restricted LED output abstraction.
-2. Implement a root-owned LED helper or equivalent minimum-privilege mechanism; do not run the TCP Controller as an unrestricted root service.
-3. Deploy and verify the helper with systemd.
-4. Observe red, green and blue individually on the physical board.
-5. Verify Branch1 = one lamp.
-6. Verify Branch2 = two lamps.
-7. Verify Branch3 = three lamps.
-8. Define and verify timeout-driven automatic all-off behavior.
-9. Verify reset immediately turns all lamps off.
-10. Verify the entity-key plus LED FSM loop.
-11. Run the PC vision → TCP → i.MX6ULL → physical key/sorting → LED end-to-end acceptance.
-12. Start M10 Qt LCD HMI only after M9 is complete. Until output and end-to-end evidence exist, M9 remains **DOING**.
+1. Run the PC vision → TCP → i.MX6ULL → physical key/sorting → LED end-to-end acceptance with time-correlated evidence.
+2. Decide whether the ordinary-user Controller should receive a separately audited persistent systemd deployment; this test intentionally used a supervised ordinary-user process.
+3. Start M10 Qt LCD HMI only after M9 is complete. Until the PC-vision end-to-end evidence exists, M9 remains **DOING**.
