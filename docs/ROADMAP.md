@@ -81,13 +81,13 @@
 - **所需真实硬件**：核心逻辑可先在主机测试；实体执行验证在后续 i.MX6ULL 阶段完成。
 - **当前状态**：DONE。实现为 `e47f27f`，覆盖容量/顺序、空满、duplicate、reset、三类路线与错误工位保持状态的回归全部通过；TEST-008 验证真实网络 FIFO，TEST-009 验证实体三按键进入同一 FSM 后完成 Branch1/2/3。实体输出不属于本里程碑结论，仍由 M9 完成。
 
-## M9 i.MX6ULL Linux 部署与 GPIO — DOING
+## M9 i.MX6ULL Linux 部署与 GPIO — DONE
 
 - **输入条件**：可用的 i.MX6ULL Linux 镜像、交叉编译或原生构建环境，以及已确认的 GPIO/LCD 硬件信息。
 - **实现任务**：部署控制器服务，接入 GPIO 按键和分支控制所需 I/O；记录 UART 调试、网络、引脚与构建环境。
 - **验收标准**：目标板可重复部署和运行；按键输入与 GPIO 输出有真实硬件记录，不把主机模拟结果标为板端验证。
 - **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
-- **当前状态**：DOING。2026-09-10/11 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` TCP smoke、实体 KEY1/2/3 和 `gpio-keys` input。受限 root helper 通过 Linux LED class 驱动官方 RGB LED；普通 `debian` Controller 经 Unix socket 完成 triangle/Branch1、circle/Branch2、rectangle/Branch3 的实体按键/FSM/LED 闭环，自动全灭与 reset 后全灭均有记录。应用不硬编码 `eventX`，不抢占 LED GPIO。PC vision → TCP → 实体按键/LED 的完整端到端证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、TEST-008、TEST-009 与 TEST-010。
+- **当前状态**：DONE。2026-09-10/11 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` TCP smoke、实体 KEY1/2/3 和 `gpio-keys` input。受限 root helper 通过 Linux LED class 驱动官方 RGB LED；普通 `debian` Controller 经 Unix socket 完成三类实体按键/FSM/LED 闭环，自动全灭与 reset 后全灭均有记录。2026-09-11，Ubuntu Ace Pro 2 经 `/dev/video2` 真实视觉产生 M4 ENTER，三类结果均经 TCP `accepted` 到实体 FIFO，再由实体键完成 Branch1/2/3 与 RGB 观察、自动熄灭和 dequeue（TEST-011）。应用不硬编码 `eventX`，不抢占 LED GPIO。见 `docs/IMX6ULL_DEPLOYMENT.md`、TEST-008～TEST-011。原始 PLC 路线不因此关闭；M10 仍为 TODO。
 
 ## M10 Qt LCD HMI — TODO
 

@@ -11,4 +11,4 @@ status: partial-complete
 
 `LinuxInputKeyInput` 仅使用 Python 3.7 标准库，按 `huiyan-keys` 设备名发现 input 节点而不固定 `eventX`。实体按键在真实 TCP 入队后的 FSM 流程中完成 triangle → Branch1、circle → Branch2、rectangle → Branch3；错误工位键保持状态，保持和快速重复操作未造成松开重复触发。随后真实 `198.51.100.2:9000` TCP smoke 仍为 10/10 PASS。
 
-本次输入验证实现为 `468f7bb223efe97af1a76198bde7dc237ba14b3e`。GPIO 输出、分支执行器接线和完整物理闭环尚未验证，故 M9 保持 DOING。详见 [[../tests/TEST-009-M9-iMX6ULL实体GPIO按键验收]] 和 `docs/IMX6ULL_DEPLOYMENT.md`。
+本次输入验证实现为 `468f7bb223efe97af1a76198bde7dc237ba14b3e`。本记录形成时 GPIO 输出、分支执行器接线和完整物理闭环尚未验证。后续 TEST-010 完成实体 LED，TEST-011 完成 PC vision 端到端闭环；批准的 i.MX6ULL M9 路线现为 DONE。详见 [[../tests/TEST-009-M9-iMX6ULL实体GPIO按键验收]] 和 `docs/IMX6ULL_DEPLOYMENT.md`。

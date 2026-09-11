@@ -62,7 +62,7 @@
 
 PC client 在后台线程中连接、发送和接收。它等待带相同 `request_id` 的 `ack` 或 `error`：超时或断线时，以相同 `request_id` 与 `command_id` 有界重试；超过重试上限后 Future 失败。控制器以 `command_id` 检测重复 enqueue，因此重连后的重复发送仍是幂等的。
 
-`heartbeat` 的 ACK 只证明 TCP 对端已处理该消息；不声明 GPIO、LCD 或实体执行健康状态。M8 的 `pipeline_state` 包含内存 FIFO 与状态机快照。M9 已把实体按键输入接到该 FSM；GPIO/LED 输出仍未实现或验证。
+`heartbeat` 的 ACK 只证明 TCP 对端已处理该消息；不单独声明 LCD 或实体执行健康状态。M8 的 `pipeline_state` 包含内存 FIFO 与状态机快照。M9 已将实体按键和受限 LED output 接到该 FSM，并有独立实体 E2E 证据；heartbeat 仍不替代这些实体验收或未来 LCD/PLC 健康检查。
 
 ## M4 / M6 compatibility
 

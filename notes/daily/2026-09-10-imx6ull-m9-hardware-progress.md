@@ -7,7 +7,7 @@ status: m9-doing
 
 # 2026-09-10 i.MX6ULL M9 硬件进度收尾
 
-> 后续更新（2026-09-11）：本页记录的是当日结束时的只读 LED 审计，因此其中“未实施/未测试”仅描述该时点。受限 helper、实体 RGB LED、实体按键/FSM/LED 闭环的后续 PASS 证据见 `notes/tests/TEST-010-M9-iMX6ULL实体LED闭环验收.md`；M9 整体仍因 PC vision 端到端未验收而保持 DOING。
+> 后续更新（2026-09-11）：本页记录的是当日结束时的只读 LED 审计，因此其中“未实施/未测试”仅描述该时点。受限 helper、实体 RGB LED、实体按键/FSM/LED 闭环的后续 PASS 证据见 TEST-010；PC vision 至实体 LED 的后续 PASS 证据见 TEST-011。批准的 i.MX6ULL M9 路线现为 DONE。
 
 ## 今日已完成且有实机证据
 
@@ -41,4 +41,4 @@ status: m9-doing
 4. 验证实体按键加 LED FSM，再进行 PC vision → TCP → i.MX6ULL → 实体按键/分拣 → LED 完整验收。
 5. M9 完成后才开始 M10 Qt LCD HMI。
 
-M9 当前为 **DOING**。
+本页的历史待办已由 TEST-010/011 补齐；M9 当前为 **DONE**（批准的 i.MX6ULL 路线）。

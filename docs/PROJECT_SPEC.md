@@ -18,7 +18,7 @@
 - `DONE`：已有实现、测试与可追溯证据。
 - `BLOCKED`：受明确外部条件阻塞，并记录原因。
 
-M1～M6 已完成各自定义范围内的验收。M3 的 VISION-003、VISION-004 已有真实多目标、三种光照、遮挡和接触/粘连证据；M4 的 PC 端事件生成子能力已经真实生命周期验证；M5 GUI 已完成真实 Insta360 持续运行、同步显示、性能和停止验收。M6 仍只代表 Fake PLC 纯离线语义模拟。2026-09-10/11 的授权 i.MX6ULL Controller 路线中，M7 TCP、M8 FIFO/三级 Pipeline FSM、M9 实体 GPIO 输入及受限 RGB LED 输出闭环均已有实体证据；PC vision 端到端仍待验收，M9 保持 DOING。上述结果不表示 PLC-002、PLC 通信、真实 PLC FIFO 或真实 PLC LED 已完成；这些原始 PLC 需求继续保持 `TODO`。
+M1～M6 已完成各自定义范围内的验收。M3 的 VISION-003、VISION-004 已有真实多目标、三种光照、遮挡和接触/粘连证据；M4 的 PC 端事件生成子能力已经真实生命周期验证；M5 GUI 已完成真实 Insta360 持续运行、同步显示、性能和停止验收。M6 仍只代表 Fake PLC 纯离线语义模拟。2026-09-10/11 的授权 i.MX6ULL Controller 路线中，M7 TCP、M8 FIFO/三级 Pipeline FSM、M9 实体 GPIO 输入、受限 RGB LED 输出及 PC vision 到实体 LED 三类端到端闭环均已有实体证据（TEST-011），M9 为 DONE。上述结果不表示 PLC-002、PLC 通信、真实 PLC FIFO 或真实 PLC LED 已完成；这些原始 PLC 需求继续保持 `TODO`。
 
 ## 3. 需求明细
 

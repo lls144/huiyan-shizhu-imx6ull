@@ -46,4 +46,4 @@ status: PASS_OUTPUT_SUBSCOPE
 
 ## 结论与限制
 
-M9 的板端输出子范围与实体按键/FSM/LED 闭环为 PASS。M9 总体仍为 **DOING**：PC 视觉事件到实体按键/LED 的完整端到端流程尚未实测，不能开始 M10 或把原始 PLC 需求标为完成。
+M9 的板端输出子范围与实体按键/FSM/LED 闭环为 PASS。本记录形成时 PC 视觉事件到实体按键/LED 的完整端到端流程尚未实测。后续 TEST-011 已完成该缺口，因此批准的 i.MX6ULL M9 路线现为 DONE；这不表示原始 PLC 需求完成，也不表示 M10 已开始。

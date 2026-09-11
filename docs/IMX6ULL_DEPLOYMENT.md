@@ -1,6 +1,6 @@
 # i.MX6ULL Controller Deployment and M9 Verification
 
-状态：**M9 DOING**。已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证、三枚实体按键到 Controller FSM，以及板载 RGB LED 的受限 helper 与实体按键/FSM/LED 闭环。PC 视觉到实体 Controller 的完整端到端验收仍未执行，因此 M9 不能标记为 DONE。
+状态：**M9 DONE（批准的 i.MX6ULL Controller 路线）**。已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证、三枚实体按键到 Controller FSM、板载 RGB LED 的受限 helper 与实体按键/FSM/LED 闭环，以及 PC 摄像头视觉至实体 LED 的三类端到端验收。该结论不关闭原始 PLC 路线或 M10。
 
 ## Deployment baseline
 
@@ -17,7 +17,7 @@
 | SSH | alias `imx6ull`, non-interactive public-key authentication |
 | input permission | `debian` is a member of group `input` (`id` includes `106(input)`), permitting reads of `/dev/input/event*` |
 | GPIO input | `gpiochip0` lines 24/25/26, active-low, verified through `gpio-keys` as `huiyan-keys` |
-| GPIO output | root-owned LED helper、Linux LED class 与实体按键/FSM/RGB LED 闭环 PASS；完整 PC vision E2E 待验收 |
+| GPIO output | root-owned LED helper、Linux LED class、实体按键/FSM/RGB LED 与 PC vision E2E PASS |
 
 The earlier safe-deployment configuration had no GPIO number and remained `NOT_CONFIGURED`. After the real mapping and wiring were confirmed, the committed configuration uses only the verified Linux input device name `huiyan-keys` and input key codes; the application does not open GPIO chips or hard-code an `eventX` number.
 
@@ -150,8 +150,14 @@ The real Controller listened on `0.0.0.0:9000` as `debian`. From dev-host, TCP h
 
 This closes the M9 board LED-output and entity-key/FSM/LED sub-scope. It is not evidence of PC vision to physical LED end-to-end operation, and it does not change the status of the original PLC requirements.
 
-## Remaining M9 work
+## 2026-09-11 PC vision → TCP → entity key/LED end-to-end closure — PASS
 
-1. Run the PC vision → TCP → i.MX6ULL → physical key/sorting → LED end-to-end acceptance with time-correlated evidence.
-2. Decide whether the ordinary-user Controller should receive a separately audited persistent systemd deployment; this test intentionally used a supervised ordinary-user process.
-3. Start M10 Qt LCD HMI only after M9 is complete. Until the PC-vision end-to-end evidence exists, M9 remains **DOING**.
+Test record: `notes/tests/TEST-011-M9-PC视觉至实体LED端到端验收.md`. The Ubuntu PC explicitly opened Ace Pro 2 at `/dev/video2` with V4L2/MJPG/1920×1080/30 fps, then reused the existing M3 detector and M4 lifecycle tracker. A narrow fail-closed bridge accepted only one declared `OBJECT_ENTER` label at a time and sent it with the existing `ControllerClient` to `198.51.100.2:9000`.
+
+| recognized shape | real M4 confidence / accepted command | physical pipeline and observed RGB result | result |
+|---|---|---|---|
+| triangle | 0.954029 / 14001 | KEY1 → Branch1 → red about 1 s → off → dequeue | PASS |
+| circle | 0.977329 / 14010 | KEY1 → Station2 (off), KEY2 → Branch2 → red+green about 1 s → off → dequeue | PASS |
+| rectangle | 0.979300 / 14020 | KEY1 → Station2 (off), KEY2 → Station3 (off), KEY3 → Branch3 → red+green+blue about 1 s → off → dequeue | PASS |
+
+The same session also rechecked a wrong physical station (no state change/no LED), TCP reset (idle/empty/all LEDs off), heartbeat and new-client reconnect. Controller remained an ordinary `debian` process on `0.0.0.0:9000`; the root helper remained active and had no error entries in the E2E interval. This completes M9 for this approved Controller route. A persistent ordinary-user Controller service is a future operational improvement, not an untested M9 acceptance requirement. M10 remains TODO and was not started.
