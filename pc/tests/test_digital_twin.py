@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+import os
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PySide6.QtWidgets import QApplication
+
 from pc.communication.state_monitor import PipelineState, QueueItem
-from pc.gui.digital_twin import SortSequenceTracker, bin_for_branch, station_for_branch
+from pc.gui.animation_controller import AnimationEventType
+from pc.gui.digital_twin import DigitalSortingLine, SortSequenceTracker, bin_for_branch, station_for_branch
 
 
 def _pipeline(
@@ -71,3 +78,21 @@ def test_reset_pipeline_clears_fifo_and_current_station_object() -> None:
     assert after_reset.queue_length == 0
     assert after_reset.current_object is None
     assert after_reset.display_station == "IDLE"
+
+
+def test_digital_twin_starts_spawn_animation_only_from_board_queue_change() -> None:
+    QApplication.instance() or QApplication(["pytest-digital-twin"])
+    line = DigitalSortingLine()
+    line.set_pipeline(_pipeline())
+    assert line.transient_animation is None
+
+    line.set_pipeline(
+        _pipeline(station="Station1", queue=(QueueItem(91, "circle"),))
+    )
+    transient = line.transient_animation
+
+    assert transient is not None
+    assert transient.event_type is AnimationEventType.SPAWN
+    assert transient.command_id == 91
+    assert transient.shape == "circle"
+    line.close()

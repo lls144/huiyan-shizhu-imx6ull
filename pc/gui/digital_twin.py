@@ -4,11 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import time
+from collections import deque
+
 from PySide6.QtCore import QPointF, QTimer
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QWidget
 
 from pc.communication.state_monitor import PipelineState, QueueItem
+
+from .animation_controller import (
+    AnimationController,
+    AnimationEventType,
+    DigitalTwinAnimationEvent,
+)
 
 
 BIN_BY_BRANCH = {
@@ -61,18 +70,25 @@ class SortSequenceTracker:
 
 
 class DigitalSortingLine(QWidget):
-    """Paint an easy-to-read static view from authoritative board state only."""
+    """Paint board state plus transient animations derived from board diffs."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("digitalSortingLine")
         self.setMinimumHeight(255)
         self._pipeline: PipelineState | None = None
+        self._animation_controller = AnimationController()
         self._sequence_tracker = SortSequenceTracker()
         self._highlighted_branch: str | None = None
         self._highlight_timer = QTimer(self)
         self._highlight_timer.setSingleShot(True)
         self._highlight_timer.timeout.connect(self._clear_highlight)
+        self._transient: DigitalTwinAnimationEvent | None = None
+        self._animation_queue: deque[DigitalTwinAnimationEvent] = deque()
+        self._transient_started = 0.0
+        self._animation_timer = QTimer(self)
+        self._animation_timer.setInterval(16)
+        self._animation_timer.timeout.connect(self._advance_animation)
 
     @property
     def sorted_counts(self) -> dict[str, int]:
@@ -82,12 +98,51 @@ class DigitalSortingLine(QWidget):
     def highlighted_branch(self) -> str | None:
         return self._highlighted_branch
 
+    @property
+    def animation_controller(self) -> AnimationController:
+        return self._animation_controller
+
+    @property
+    def transient_animation(self) -> DigitalTwinAnimationEvent | None:
+        return self._transient
+
     def set_pipeline(self, pipeline: PipelineState | None) -> None:
         self._pipeline = pipeline
+        for event in self._animation_controller.update(pipeline):
+            self._start_animation(event)
         branch = self._sequence_tracker.update(pipeline)
         if branch is not None:
             self._highlighted_branch = branch
             self._highlight_timer.start(1400)
+        self.update()
+
+    def _start_animation(self, event: DigitalTwinAnimationEvent) -> None:
+        """Queue one real-board transition for a short visual overlay."""
+
+        if self._transient is not None:
+            self._animation_queue.append(event)
+            return
+        self._begin_animation(event)
+
+    def _begin_animation(self, event: DigitalTwinAnimationEvent) -> None:
+        self._transient = event
+        self._transient_started = time.monotonic()
+        self._animation_timer.start()
+        self.update()
+
+    def _advance_animation(self) -> None:
+        if self._transient is None:
+            if self._animation_queue:
+                self._begin_animation(self._animation_queue.popleft())
+            else:
+                self._animation_timer.stop()
+            return
+        if time.monotonic() - self._transient_started >= 0.65:
+            self._transient = None
+            if self._animation_queue:
+                self._begin_animation(self._animation_queue.popleft())
+            else:
+                self._animation_timer.stop()
         self.update()
 
     def _clear_highlight(self) -> None:
@@ -125,6 +180,42 @@ class DigitalSortingLine(QWidget):
                 5,
             )
         painter.restore()
+
+    @staticmethod
+    def _station_point(station: str | None, line_right: int, stations_y: list[int]) -> QPointF | None:
+        if station in {"Station1", "Station2", "Station3"}:
+            return QPointF(line_right - 48, stations_y[int(station[-1]) - 1])
+        return None
+
+    def _draw_transient(
+        self,
+        painter: QPainter,
+        event: DigitalTwinAnimationEvent,
+        *,
+        entry_point: QPointF,
+        line_right: int,
+        bins_left: int,
+        stations_y: list[int],
+    ) -> None:
+        elapsed = min(1.0, (time.monotonic() - self._transient_started) / 0.65)
+        if event.event_type is AnimationEventType.SPAWN:
+            start = entry_point
+            end = self._station_point(event.target_station, line_right, stations_y) or entry_point
+            size = 16 + 19 * elapsed
+        elif event.event_type is AnimationEventType.STATION_TRANSITION:
+            start = self._station_point(event.source_station, line_right, stations_y) or entry_point
+            end = self._station_point(event.target_station, line_right, stations_y) or start
+            size = 35
+        else:
+            start = self._station_point(event.source_station, line_right, stations_y) or entry_point
+            branch_index = {"Branch1": 0, "Branch2": 1, "Branch3": 2}.get(event.branch, 1)
+            end = QPointF(bins_left + 38, 83 + branch_index * 63)
+            size = 35 - 12 * elapsed
+        point = QPointF(
+            start.x() + (end.x() - start.x()) * elapsed,
+            start.y() + (end.y() - start.y()) * elapsed,
+        )
+        self._draw_shape(painter, event.shape, point, size)
 
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self)
@@ -184,7 +275,12 @@ class DigitalSortingLine(QWidget):
                 painter.setPen(QColor("#f6c453"))
                 painter.drawText(line_right - 112, station_y + 15, "MATCH")
             if active and pipeline.current_object is not None:
-                self._draw_shape(painter, pipeline.current_object, QPointF(line_right - 48, station_y), 35)
+                if not (
+                    self._transient is not None
+                    and self._transient.command_id == pipeline.queue[0].command_id
+                    and self._transient.event_type is AnimationEventType.STATION_TRANSITION
+                ):
+                    self._draw_shape(painter, pipeline.current_object, QPointF(line_right - 48, station_y), 35)
 
         painter.setPen(QColor("#d4d4d4"))
         painter.drawText(bins_left, 43, "SORT BINS")
@@ -198,4 +294,13 @@ class DigitalSortingLine(QWidget):
             painter.drawText(bins_left + 10, y + 21, BIN_BY_BRANCH[branch])
             painter.setPen(QColor("#969696"))
             painter.drawText(bins_left + 10, y + 39, f"MATCHES {self._sequence_tracker.counts[branch]}")
+        if self._transient is not None:
+            self._draw_transient(
+                painter,
+                self._transient,
+                entry_point=QPointF(line_left, 58),
+                line_right=line_right,
+                bins_left=bins_left,
+                stations_y=stations_y,
+            )
         painter.end()
