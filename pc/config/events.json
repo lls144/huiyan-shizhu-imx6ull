@@ -2,6 +2,7 @@
   "tracking": {
     "min_confirm_frames": 2,
     "max_missing_frames": 3,
+    "occlusion_grace_frames": 25,
     "iou_threshold": 0.3,
     "center_distance_threshold": 80.0
   }

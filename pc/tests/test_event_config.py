@@ -14,6 +14,7 @@ def test_committed_event_config_loads_expected_values() -> None:
     assert config == EventConfig(
         min_confirm_frames=2,
         max_missing_frames=3,
+        occlusion_grace_frames=25,
         iou_threshold=0.3,
         center_distance_threshold=80.0,
     )
@@ -24,6 +25,7 @@ def test_committed_event_config_loads_expected_values() -> None:
     [
         ("min_confirm_frames", 0, "min_confirm_frames"),
         ("max_missing_frames", -1, "max_missing_frames"),
+        ("occlusion_grace_frames", 0, "occlusion_grace_frames"),
         ("iou_threshold", 1.1, "iou_threshold"),
         ("center_distance_threshold", -1, "center_distance_threshold"),
     ],
@@ -37,6 +39,7 @@ def test_invalid_event_config_is_rejected(
     values = {
         "min_confirm_frames": 2,
         "max_missing_frames": 3,
+        "occlusion_grace_frames": 25,
         "iou_threshold": 0.3,
         "center_distance_threshold": 80.0,
     }

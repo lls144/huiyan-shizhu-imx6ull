@@ -64,3 +64,7 @@ status: pass
 ## 结论
 
 Windows Camera 到真实 i.MX6ULL Digital Twin E2E 为 **PASS**。本记录仅对本次 Windows 11、Insta360 Ace Pro 2、RJ45、实体 KEY 实测负责；自动 ROI 场景标定、连续动画、PyInstaller/EXE 仍为后续 TODO。
+
+## 后续生命周期订正
+
+本记录中的 Circle object 2（`command_id=180002`）后来经现场复盘确认受手部短暂遮挡后的旧 lifecycle 误 EXIT 影响，**不再作为理想的 re-entry 行为保留**。三 shape 的 Camera-to-board E2E 证据仍有效；temporary occlusion 与真实 EXIT/re-entry 的专门修复及实机复测见 TEST-017。

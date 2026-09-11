@@ -10,10 +10,11 @@ from typing import Any
 
 @dataclass(frozen=True)
 class EventConfig:
-    """Small set of deterministic frame-based association parameters."""
+    """Deterministic frame-based association and occlusion parameters."""
 
     min_confirm_frames: int = 2
     max_missing_frames: int = 3
+    occlusion_grace_frames: int = 25
     iou_threshold: float = 0.30
     center_distance_threshold: float = 80.0
 
@@ -31,6 +32,8 @@ class EventConfig:
             raise ValueError("min_confirm_frames must be positive")
         if self.max_missing_frames < 0:
             raise ValueError("max_missing_frames must be non-negative")
+        if self.occlusion_grace_frames <= 0:
+            raise ValueError("occlusion_grace_frames must be positive")
         if not 0 <= self.iou_threshold <= 1:
             raise ValueError("iou_threshold must be in [0, 1]")
         if self.center_distance_threshold < 0:

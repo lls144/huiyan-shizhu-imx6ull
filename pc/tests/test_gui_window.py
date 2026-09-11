@@ -220,7 +220,9 @@ def test_full_synthetic_lifecycle_has_one_enter_and_exit_per_object(
     qt_app: QApplication, tmp_path: Path
 ) -> None:
     blank = np.full_like(NORMAL_IMAGE, 245)
-    frames = [blank] * 2 + [NORMAL_IMAGE] * 3 + [blank] * 4
+    # Confirmed objects stay PENDING_EXIT through the configured 25-frame
+    # hand-occlusion grace.  Only the following missing frame is a real EXIT.
+    frames = [blank] * 2 + [NORMAL_IMAGE] * 3 + [blank] * 26
     window = _window(tmp_path, lambda: SequenceSource(frames))
     window.start_session()
     _wait_until(qt_app, lambda: window.last_session_summary is not None and not window.is_running)

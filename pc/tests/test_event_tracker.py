@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG = EventConfig(
     min_confirm_frames=2,
     max_missing_frames=3,
+    occlusion_grace_frames=25,
     iou_threshold=0.3,
     center_distance_threshold=80.0,
 )
@@ -71,10 +72,11 @@ def test_single_frame_noise_never_confirms() -> None:
 
     assert events == []
     assert manager.object_states()[0].confirmed is False
-    assert manager.object_states()[0].active is False
+    assert manager.object_states()[0].active is True
+    assert manager.object_states()[0].status == "candidate"
 
 
-def test_short_dropout_keeps_identity_without_second_enter() -> None:
+def test_short_hand_occlusion_keeps_identity_without_exit_or_second_enter() -> None:
     manager, events = _run([[{}], [{}], [], [{}], [{}]])
 
     assert _event_keys(events) == [("OBJECT_ENTER", 1, "circle", 1)]
@@ -82,23 +84,34 @@ def test_short_dropout_keeps_identity_without_second_enter() -> None:
     assert manager.object_states()[0].hit_count == 4
 
 
-def test_true_removal_emits_exit_after_missing_tolerance() -> None:
-    manager, events = _run([[{}], [{}], [], [], [], []])
+def test_near_grace_occlusion_recovers_original_track_without_lifecycle_events() -> None:
+    manager, events = _run([[{}], [{}]] + [[] for _ in range(25)] + [[{}], [{}]])
+
+    assert _event_keys(events) == [("OBJECT_ENTER", 1, "circle", 1)]
+    recovered = manager.object_states()[0]
+    assert recovered.object_id == 1
+    assert recovered.active is True
+    assert recovered.status == "confirmed"
+    assert recovered.miss_count == 0
+
+
+def test_true_removal_emits_exit_once_after_occlusion_grace() -> None:
+    manager, events = _run([[{}], [{}]] + [[] for _ in range(26)])
 
     assert _event_keys(events) == [
         ("OBJECT_ENTER", 1, "circle", 1),
-        ("OBJECT_EXIT", 1, "circle", 5),
+        ("OBJECT_EXIT", 1, "circle", 27),
     ]
     assert manager.object_states()[0].status == "exited"
 
 
 def test_reentry_uses_new_object_id() -> None:
-    _, events = _run([[{}], [{}], [], [], [], [], [{}], [{}]])
+    _, events = _run([[{}], [{}]] + [[] for _ in range(26)] + [[{}], [{}]])
 
     assert _event_keys(events) == [
         ("OBJECT_ENTER", 1, "circle", 1),
-        ("OBJECT_EXIT", 1, "circle", 5),
-        ("OBJECT_ENTER", 2, "circle", 7),
+        ("OBJECT_EXIT", 1, "circle", 27),
+        ("OBJECT_ENTER", 2, "circle", 29),
     ]
 
 
@@ -176,7 +189,7 @@ def test_clear_all_exits_every_confirmed_object_once() -> None:
         {"label": "rectangle", "bbox": (350, 100, 120, 100)},
         {"label": "circle", "bbox": (650, 100, 100, 100)},
     ]
-    manager, events = _run([frame, frame, [], [], [], []])
+    manager, events = _run([frame, frame] + [[] for _ in range(26)])
 
     counts = Counter((event.object_id, event.event_type) for event in events)
     assert len(events) == 6
@@ -215,7 +228,54 @@ def test_frame_index_must_increase_without_sleep_or_wall_clock() -> None:
 
 
 def test_each_confirmed_lifecycle_has_at_most_one_enter_and_exit() -> None:
-    _, events = _run([[{}], [{}], [], [{}], [], [], [], [], [{}], [{}], [], [], [], []])
+    _, events = _run(
+        [[{}], [{}]]
+        + [[] for _ in range(5)]
+        + [[{}], [{}]]
+        + [[] for _ in range(26)]
+        + [[{}], [{}]]
+        + [[] for _ in range(26)]
+    )
     counts = Counter((event.object_id, event.event_type) for event in events)
 
     assert all(count == 1 for count in counts.values())
+
+
+def test_different_shape_during_pending_exit_is_never_reassociated() -> None:
+    manager, events = _run(
+        [
+            [{"label": "circle", "bbox": (100, 100, 100, 100)}],
+            [{"label": "circle", "bbox": (100, 100, 100, 100)}],
+            [],
+            [{"label": "triangle", "bbox": (100, 100, 100, 100)}],
+            [{"label": "triangle", "bbox": (100, 100, 100, 100)}],
+        ]
+    )
+
+    assert _event_keys(events) == [
+        ("OBJECT_ENTER", 1, "circle", 1),
+        ("OBJECT_ENTER", 2, "triangle", 4),
+    ]
+    active = {state.object_id: state for state in manager.object_states() if state.active}
+    assert active[1].status == "pending_exit"
+    assert active[2].label == "triangle"
+
+
+def test_far_same_shape_during_pending_exit_is_a_distinct_object() -> None:
+    manager, events = _run(
+        [
+            [{"label": "circle", "bbox": (100, 100, 100, 100)}],
+            [{"label": "circle", "bbox": (100, 100, 100, 100)}],
+            [],
+            [{"label": "circle", "bbox": (500, 100, 100, 100)}],
+            [{"label": "circle", "bbox": (500, 100, 100, 100)}],
+        ]
+    )
+
+    assert _event_keys(events) == [
+        ("OBJECT_ENTER", 1, "circle", 1),
+        ("OBJECT_ENTER", 2, "circle", 4),
+    ]
+    active = {state.object_id: state for state in manager.object_states() if state.active}
+    assert active[1].status == "pending_exit"
+    assert active[2].bbox == (500, 100, 100, 100)

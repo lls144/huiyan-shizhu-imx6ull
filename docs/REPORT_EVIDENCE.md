@@ -14,5 +14,6 @@
 | Windows RJ45 Python protocol smoke | `scripts/windows_controller_protocol_smoke.py` | TEST-014 | real Windows `ControllerClient` to `203.0.113.2:9000`: connect, heartbeat, state and reset PASS; retry fault path not injected |
 | Windows GUI board-state monitor | `pc/communication/state_monitor.py` + `pc/gui/` | TEST-015 | real Windows Vision Console to `203.0.113.2:9000`: heartbeat-derived ONLINE and physical KEY1/2/3 state transitions shown in the Board State panel |
 | Windows Camera to digital sorting line | `pc/gui/`, `pc/communication/vision_dispatcher.py` + `vision_bridge.py` | TEST-016 | real Insta360 Ace Pro 2 Camera -> confirmed OBJECT_ENTER -> existing ControllerClient enqueue ACK -> physical keys -> real FIFO/FSM/Branch1/2/3 reflected in the single PySide6 Digital Sorting Line |
+| Windows camera occlusion lifecycle | `pc/events/tracker.py` + `pc/config/events.json` | TEST-017 | real hand occlusion preserves one confirmed object/one enqueue; 25-frame grace with shape and spatial re-association, followed by verified true EXIT and new-ID re-entry |
 
 Runtime recordings under ignored `output/` are local evidence, not automatically committed artifacts. Test records state their evidence limits explicitly.

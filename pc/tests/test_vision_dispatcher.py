@@ -9,6 +9,9 @@ import cv2
 
 from pc.communication.vision_dispatcher import VisionEventDispatcher
 from pc.communication.vision_bridge import VisionEventEnqueuer
+from pc.events.config import EventConfig
+from pc.events.models import Detection
+from pc.events.tracker import ObjectStateManager
 from pc.events.config import load_event_config
 from pc.events.models import EventType, VisionEvent
 from pc.gui.worker import EvidenceRequestBuffer, LatestSnapshotBuffer, VisionWorker
@@ -118,6 +121,36 @@ def test_offline_and_queue_full_are_visible_terminal_results_without_replay() ->
         full.close()
     assert full_result.outcome == "queue_full"
     assert full_result.command_id == 501
+
+
+def test_hand_occlusion_dispatches_only_the_original_enter_to_enqueue() -> None:
+    manager = ObjectStateManager(
+        EventConfig(
+            min_confirm_frames=2,
+            max_missing_frames=3,
+            occlusion_grace_frames=25,
+            iou_threshold=0.3,
+            center_distance_threshold=80.0,
+        )
+    )
+    enqueuer = _AcceptedEnqueuer()
+    dispatcher = VisionEventDispatcher(enqueuer, board_online=lambda: True)  # type: ignore[arg-type]
+    try:
+        for frame_index in range(14):
+            detections = (
+                [Detection("circle", 0.95, (100, 100, 100, 100), frame_index)]
+                if frame_index in {0, 1, 12, 13}
+                else []
+            )
+            for event in manager.process_frame(frame_index, detections).events:
+                dispatcher.submit(event)
+        results = _drain_until(dispatcher)
+    finally:
+        dispatcher.close()
+
+    assert [event.event_type for event in enqueuer.events] == [EventType.OBJECT_ENTER]
+    assert [event.object_id for event in enqueuer.events] == [1]
+    assert [result.outcome for result in results] == ["accepted"]  # type: ignore[attr-defined]
 
 
 class _FixedSource:
