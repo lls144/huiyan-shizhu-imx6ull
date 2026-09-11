@@ -80,11 +80,30 @@ class FpsMeter:
 
 
 def open_live_camera(camera_config_path: Path) -> LiveCamera:
-    """Resolve and open a camera strictly through the existing M1 functions."""
+    """Resolve and open a camera strictly through the existing M1 functions.
+
+    A configured ``device_path`` is an intentional platform-specific override
+    (for example Linux ``/dev/video2``).  It avoids ambiguous index selection;
+    name/index enumeration remains the unchanged default for existing configs.
+    """
 
     camera_config = load_camera_config(camera_config_path)
-    devices = enumerate_camera_devices(camera_config.backend)
-    device = select_camera_device(devices, camera_config.device_name, camera_config.fallback_index)
+    if camera_config.device_path is not None:
+        from pc.camera.devices import resolve_backend
+
+        backend_name = camera_config.backend.strip().upper()
+        device = CameraDevice(
+            index=camera_config.device_path,
+            name=camera_config.device_name or camera_config.device_path,
+            path=camera_config.device_path,
+            vid=None,
+            pid=None,
+            backend_name=backend_name,
+            backend_id=resolve_backend(backend_name),
+        )
+    else:
+        devices = enumerate_camera_devices(camera_config.backend)
+        device = select_camera_device(devices, camera_config.device_name, camera_config.fallback_index)
     capture = open_configured_camera(device, camera_config)
     return LiveCamera(capture, device, camera_config)
 

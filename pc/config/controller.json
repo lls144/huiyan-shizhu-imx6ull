@@ -1,0 +1,8 @@
+{
+  "host": "198.51.100.2",
+  "port": 9000,
+  "connect_timeout": 1.0,
+  "ack_timeout": 1.0,
+  "reconnect_delay": 0.1,
+  "max_retries": 2
+}

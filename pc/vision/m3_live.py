@@ -9,7 +9,7 @@ import sys
 import time
 from dataclasses import asdict, replace
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
 
 import cv2
 import numpy as np
@@ -278,8 +278,21 @@ def run_m3_live_session(
     expected_labels: Sequence[str],
     reuse_calibration: bool = False,
     event_config_path: Path | None = None,
+    event_sink: Optional[Callable[[VisionEvent], Optional[Dict[str, Any]]]] = None,
+    stop_after_event_sink_accept: bool = False,
 ) -> int:
-    """Run M3 preview with optional M4 events and paired evidence on keys 1-5."""
+    """Run M3 preview with optional M4 events and paired evidence on keys 1-5.
+
+    ``event_sink`` is deliberately optional and is invoked only after M4 has
+    produced a lifecycle event.  The M9 PC-to-Controller bridge uses it for a
+    confirmed ``OBJECT_ENTER``; ordinary M3/M4 sessions retain their existing
+    no-network behavior.
+
+    When ``stop_after_event_sink_accept`` is true, a non-``None`` result from
+    the sink ends the live session successfully after the frame/report have
+    been written.  The M9 one-object acceptance path uses this to guarantee
+    that one confirmed visual object produces at most one enqueue per run.
+    """
 
     event_config: EventConfig | None = (
         load_event_config(event_config_path) if event_config_path is not None else None
@@ -371,6 +384,7 @@ def run_m3_live_session(
         )
         processing_started = time.perf_counter()
         while True:
+            accepted_controller_dispatch = False
             active_config = _config_for_mode(vision_config, active_mode)
             analysis = analyze_multiple_objects(frame, active_config, calibration.roi)
             event_update: FrameUpdate | None = None
@@ -391,7 +405,13 @@ def run_m3_live_session(
                 if event_update.events:
                     for event in event_update.events:
                         latest_event = event
-                        event_records.append(event.to_record())
+                        event_record = event.to_record()
+                        if event_sink is not None:
+                            dispatch = event_sink(event)
+                            if dispatch is not None:
+                                event_record["controller_enqueue"] = dispatch
+                                accepted_controller_dispatch = True
+                        event_records.append(event_record)
                         print(
                             f"M4 {event.event_type.value} event_id={event.event_id} "
                             f"object_id={event.object_id} label={event.label} "
@@ -408,6 +428,9 @@ def run_m3_live_session(
                 latest_event,
             )
             cv2.imshow(window_name, annotated)
+            if accepted_controller_dispatch and stop_after_event_sink_accept:
+                completed_normally = True
+                return 0
             frames_processed += 1
             key = cv2.waitKey(1) & 0xFF
             if key in (ord("q"), ord("Q"), 27):

@@ -1,4 +1,4 @@
-"""Enumerate Windows cameras and select one without hard-coded indices."""
+"""Enumerate configured cameras or use an explicit, audited device path."""
 
 from __future__ import annotations
 
@@ -12,12 +12,13 @@ BACKENDS = {
     "ANY": cv2.CAP_ANY,
     "DSHOW": cv2.CAP_DSHOW,
     "MSMF": cv2.CAP_MSMF,
+    "V4L2": cv2.CAP_V4L2,
 }
 
 
 @dataclass(frozen=True)
 class CameraDevice:
-    index: int
+    index: int | str
     name: str
     path: str
     vid: int | None

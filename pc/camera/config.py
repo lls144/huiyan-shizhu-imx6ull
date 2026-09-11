@@ -24,6 +24,7 @@ class CameraConfig:
     reopen_cycles: int
     minimum_read_success_rate: float
     maximum_frame_gap_seconds: float
+    device_path: str | None = None
 
     @classmethod
     def from_dict(cls, values: dict[str, Any]) -> "CameraConfig":
@@ -32,8 +33,8 @@ class CameraConfig:
         return config
 
     def validate(self) -> None:
-        if not self.device_name.strip() and self.fallback_index is None:
-            raise ValueError("device_name or fallback_index must be provided")
+        if not self.device_name.strip() and self.fallback_index is None and not self.device_path:
+            raise ValueError("device_name, fallback_index, or device_path must be provided")
         if self.fallback_index is not None and self.fallback_index < 0:
             raise ValueError("fallback_index must be non-negative")
         if self.requested_width <= 0 or self.requested_height <= 0:
@@ -42,6 +43,8 @@ class CameraConfig:
             raise ValueError("requested_fps must be positive")
         if len(self.fourcc) != 4:
             raise ValueError("fourcc must contain exactly four characters")
+        if self.device_path is not None and not self.device_path.strip():
+            raise ValueError("device_path must not be blank when provided")
         if self.warmup_frames < 0:
             raise ValueError("warmup_frames must be non-negative")
         if self.test_duration_seconds <= 0:
