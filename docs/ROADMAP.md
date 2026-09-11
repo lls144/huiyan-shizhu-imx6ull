@@ -89,13 +89,13 @@
 - **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
 - **当前状态**：DONE。2026-09-10/11 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` TCP smoke、实体 KEY1/2/3 和 `gpio-keys` input。受限 root helper 通过 Linux LED class 驱动官方 RGB LED；普通 `debian` Controller 经 Unix socket 完成三类实体按键/FSM/LED 闭环，自动全灭与 reset 后全灭均有记录。2026-09-11，Ubuntu Ace Pro 2 经 `/dev/video2` 真实视觉产生 M4 ENTER，三类结果均经 TCP `accepted` 到实体 FIFO，再由实体键完成 Branch1/2/3 与 RGB 观察、自动熄灭和 dequeue（TEST-011）。应用不硬编码 `eventX`，不抢占 LED GPIO。见 `docs/IMX6ULL_DEPLOYMENT.md`、TEST-008～TEST-011。原始 PLC 路线不因此关闭；M10 仍为 TODO。
 
-## M10 Qt LCD HMI — TODO
+## M10 Qt LCD HMI — DONE
 
 - **输入条件**：M8 的稳定控制器状态与 M9 的目标板图形/显示环境。
 - **实现任务**：实现 Qt LCD HMI，显示连接、FIFO、流水线、按键、故障和分支状态。
 - **验收标准**：LCD 上的状态与控制器状态一致；启动、运行、故障和恢复界面均有可复现验证。
 - **所需真实硬件**：i.MX6ULL、兼容 LCD 与已配置的 Qt 运行环境。
-- **当前状态**：TODO。
+- **当前状态**：DONE。2026-09-11 在真实 i.MX6ULL LCD 上以 Python 3.7.3、PySide2 5.11.2 / Qt 5.11.3、`linuxfb:fb=/dev/fb0` 运行单页 HMI。HMI 通过 `127.0.0.1:9000` 的既有 TCP API 显示 Controller/FIFO/队头/Station/最近分拣/会话计数/最近有效按键，并通过同一 API 执行触摸 RESET；不直接访问 GPIO、LED 或输入设备。动态实测覆盖三类 PC 摄像头真实识别入队后的实体按键/Branch/RGB LED、FIFO 3/3 顺序、错误 KEY3、触摸 reset 与可观察 OFFLINE→ONLINE 自动恢复。启动脚本动态发现 Goodix tslib 设备、单实例运行；野火 Qt Demo 已可逆禁用以避免 framebuffer/touch 冲突。见 TEST-012 和 `docs/IMX6ULL_DEPLOYMENT.md`。原始 PLC 路线仍独立 TODO。
 
 ## M11 可靠性机制 — TODO
 

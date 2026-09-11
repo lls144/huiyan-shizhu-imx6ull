@@ -52,4 +52,7 @@ class PipelineFSM:
             "empty": self.fifo.empty,
             "full": self.fifo.full,
             "front": front.to_record() if front is not None else None,
+            # The ordered list is additive state for observers such as the
+            # LCD HMI.  It never grants them mutation access to the FIFO.
+            "queue": [command.to_record() for command in self.fifo.snapshot()],
         }

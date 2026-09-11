@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Deque, Optional
+from typing import Deque, Optional, Tuple
 
 from .models import Command
 
@@ -42,6 +42,11 @@ class FifoQueue:
 
     def peek(self) -> Optional[Command]:
         return self.front
+
+    def snapshot(self) -> Tuple[Command, ...]:
+        """Return the FIFO contents in dequeue order without mutating it."""
+
+        return tuple(self._items)
 
     def clear(self) -> None:
         self._items.clear()

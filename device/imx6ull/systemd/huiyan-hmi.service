@@ -1,0 +1,18 @@
+[Unit]
+Description=Huiyan i.MX6ULL LCD HMI
+After=network-online.target huiyan-led-helper.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=debian
+Group=debian
+SupplementaryGroups=input
+WorkingDirectory=/home/debian/huiyan-shizhu
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/debian/huiyan-shizhu/device/imx6ull/scripts/start_hmi.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

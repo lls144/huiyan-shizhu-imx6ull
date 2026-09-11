@@ -1,4 +1,4 @@
-# i.MX6ULL Controller Deployment and M9 Verification
+# i.MX6ULL Controller Deployment and M9/M10 Verification
 
 状态：**M9 DONE（批准的 i.MX6ULL Controller 路线）**。已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证、三枚实体按键到 Controller FSM、板载 RGB LED 的受限 helper 与实体按键/FSM/LED 闭环，以及 PC 摄像头视觉至实体 LED 的三类端到端验收。该结论不关闭原始 PLC 路线或 M10。
 
@@ -160,4 +160,15 @@ Test record: `notes/tests/TEST-011-M9-PC视觉至实体LED端到端验收.md`. T
 | circle | 0.977329 / 14010 | KEY1 → Station2 (off), KEY2 → Branch2 → red+green about 1 s → off → dequeue | PASS |
 | rectangle | 0.979300 / 14020 | KEY1 → Station2 (off), KEY2 → Station3 (off), KEY3 → Branch3 → red+green+blue about 1 s → off → dequeue | PASS |
 
-The same session also rechecked a wrong physical station (no state change/no LED), TCP reset (idle/empty/all LEDs off), heartbeat and new-client reconnect. Controller remained an ordinary `debian` process on `0.0.0.0:9000`; the root helper remained active and had no error entries in the E2E interval. This completes M9 for this approved Controller route. A persistent ordinary-user Controller service is a future operational improvement, not an untested M9 acceptance requirement. M10 remains TODO and was not started.
+The same session also rechecked a wrong physical station (no state change/no LED), TCP reset (idle/empty/all LEDs off), heartbeat and new-client reconnect. Controller remained an ordinary `debian` process on `0.0.0.0:9000`; the root helper remained active and had no error entries in the E2E interval. This completes M9 for this approved Controller route. A persistent ordinary-user Controller service is a future operational improvement, not an untested M9 acceptance requirement.
+
+## 2026-09-11 M10 LCD Qt HMI — PASS
+
+Test record: `notes/tests/TEST-012-M10-iMX6ULL-LCD-HMI验收.md`.
+
+- The real LCD uses `/dev/fb0` (`mxs-lcdif`), 800×480, 16 bpp and stride 1600.  The board runtime is Python 3.7.3, PySide2 5.11.2 / Qt 5.11.3, with `linuxfb:fb=/dev/fb0`.
+- `device/imx6ull/scripts/start_hmi.sh` dynamically locates the touchscreen by the kernel input-device name (Goodix names first, `/sys/class/input` fallback), rather than hard-coding `event3`.  The actual Goodix device in this session was `/dev/input/event3`.
+- The launcher checks fb0, the tslib generic Qt plugin, fonts, tslib configuration and read permission before starting one HMI instance.  It sets the verified tslib/plugin/font environment and unsets stale evdev variables.  It deliberately never sets `QT_QPA_FB_HIDECURSOR=1`: Qt 5.11 linuxfb on this target segfaults in `app.exec_()` when that variable is used.
+- `huiyan-hmi.service` runs as ordinary `debian` with the `input` supplementary group, starts after basic networking and the LED helper, and delegates all single-instance protection to the same launcher.  The HMI only uses `127.0.0.1:9000`; it does not access GPIO, LED sysfs, FIFO internals or `/dev/input` itself.
+- The vendor `ebf-qtdemo.service` was identified as the auto-start source for `/usr/local/qt-app/run.sh` and `/usr/local/qt-app/App`.  It was disabled reversibly; neither the vendor directory nor binary was modified.  Its historical `failed` state is not a running process.
+- Physical LCD display, real `/dev/input` tslib touch RESET, three true camera/M4/TCP enqueue paths, physical key/FSM/LED routing, ordered 3/3 FIFO, wrong-key retention, and an observable Controller OFFLINE→ONLINE recovery all passed.  The HMI stayed a single ordinary-user process and the vendor Demo process was absent.
