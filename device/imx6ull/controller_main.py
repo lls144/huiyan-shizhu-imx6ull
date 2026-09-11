@@ -19,6 +19,7 @@ from device.imx6ull.core import IKeyInput, KeyboardKeyInput, LinuxInputKeyInput
 from device.imx6ull.core.models import Key
 from device.imx6ull.core.controller import ControllerCore
 from device.imx6ull.network.tcp_server import DesktopControllerServer
+from device.imx6ull.output import BranchOutputDispatcher, NullBranchOutputBackend, UnixSocketBranchOutputBackend
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class ControllerRuntime:
     config: ControllerConfig
     key_input: IKeyInput
     server: DesktopControllerServer
+    output_dispatcher: BranchOutputDispatcher
 
 
 def build_runtime(config: ControllerConfig, mode: str, host: str = "0.0.0.0") -> ControllerRuntime:
@@ -39,7 +41,17 @@ def build_runtime(config: ControllerConfig, mode: str, host: str = "0.0.0.0") ->
     else:
         raise ValueError("mode must be desktop or imx6ull")
     core = ControllerCore(capacity=config.fifo_capacity)
-    return ControllerRuntime(config, key_input, DesktopControllerServer(host, config.tcp_port, core=core))
+    backend = (
+        UnixSocketBranchOutputBackend(config.led_output.socket_path)
+        if config.led_output.enabled
+        else NullBranchOutputBackend()
+    )
+    return ControllerRuntime(
+        config,
+        key_input,
+        DesktopControllerServer(host, config.tcp_port, core=core),
+        BranchOutputDispatcher(backend),
+    )
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -54,12 +66,15 @@ def main() -> int:
     args = _parser().parse_args()
     runtime = build_runtime(load_controller_config(args.config), args.mode, args.host)
     runtime.server.start()
+    runtime.output_dispatcher.start()
     host, port = runtime.server.address
     print(f"controller mode={args.mode} listening on {host}:{port}", flush=True)
     print(f"key input status={runtime.key_input.poll().status.value}", flush=True)
     try:
         while True:
             result = runtime.server.core.process_key_input(runtime.key_input)
+            for event in runtime.server.core.drain_output_events():
+                runtime.output_dispatcher.submit(event)
             if result is not None:
                 print(
                     "hardware key status={0} branch={1} queue_length={2}".format(
@@ -71,6 +86,7 @@ def main() -> int:
     except KeyboardInterrupt:
         return 0
     finally:
+        runtime.output_dispatcher.close()
         runtime.server.close()
 
 

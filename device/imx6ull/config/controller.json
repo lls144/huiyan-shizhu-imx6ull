@@ -14,5 +14,9 @@
       "KEY2": 149,
       "KEY3": 202
     }
+  },
+  "led_output": {
+    "enabled": false,
+    "socket_path": "/run/huiyan-led/helper.sock"
   }
 }

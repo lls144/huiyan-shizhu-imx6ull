@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import threading
-from typing import Dict, Optional, Set, Union
+from collections import deque
+from typing import Deque, Dict, Optional, Set, Tuple, Union
 
 from .fifo import FifoQueue
 from .key_input import IKeyInput
-from .models import Command, CoreResult, Key, TransitionKind
+from .models import BranchOutputEvent, Command, CoreResult, Key, OutputEvent, OutputOffEvent, TransitionKind
 from .pipeline import PipelineFSM
 
 
@@ -16,6 +17,7 @@ class ControllerCore:
         self.fifo = FifoQueue(capacity)
         self.pipeline = PipelineFSM(self.fifo)
         self._accepted_command_ids = set()  # type: Set[int]
+        self._output_events = deque()  # type: Deque[OutputEvent]
         self._lock = threading.RLock()
 
     def pipeline_state(self) -> Dict[str, object]:
@@ -42,12 +44,18 @@ class ControllerCore:
     def handle_key(self, key: Union[Key, str]) -> CoreResult:
         with self._lock:
             transition = self.pipeline.handle_key(Key(key))
-            return CoreResult(
+            result = CoreResult(
                 transition.kind.value.lower(),
                 self.pipeline_state(),
                 transition.command,
                 transition.branch,
             )
+            if transition.kind is TransitionKind.SORTED:
+                # PipelineFSM remains hardware-agnostic.  The composition root
+                # drains this small in-memory event queue without blocking TCP
+                # or key input processing.
+                self._output_events.append(BranchOutputEvent(transition.branch or ""))
+            return result
 
     def process_key_input(self, key_input: IKeyInput) -> Optional[CoreResult]:
         key = key_input.read_key()
@@ -58,4 +66,13 @@ class ControllerCore:
             self.fifo.clear()
             self.pipeline.reset()
             self._accepted_command_ids.clear()
+            self._output_events.append(OutputOffEvent())
             return CoreResult("reset", self.pipeline_state())
+
+    def drain_output_events(self) -> Tuple[OutputEvent, ...]:
+        """Return and clear pending branch-display events without hardware I/O."""
+
+        with self._lock:
+            events = tuple(self._output_events)
+            self._output_events.clear()
+            return events

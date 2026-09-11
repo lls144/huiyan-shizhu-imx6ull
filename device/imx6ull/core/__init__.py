@@ -3,10 +3,11 @@
 from .controller import ControllerCore
 from .fifo import FifoQueue
 from .key_input import GpioKeyInput, IKeyInput, KeyInputResult, KeyInputStatus, KeyboardKeyInput, LinuxInputKeyInput
-from .models import Command, Key, TransitionKind
+from .models import BranchOutputEvent, Command, Key, OutputEvent, OutputOffEvent, TransitionKind
 from .pipeline import PipelineFSM
 
 __all__ = [
+    "BranchOutputEvent",
     "Command",
     "ControllerCore",
     "FifoQueue",
@@ -17,6 +18,8 @@ __all__ = [
     "KeyInputStatus",
     "KeyboardKeyInput",
     "LinuxInputKeyInput",
+    "OutputEvent",
+    "OutputOffEvent",
     "PipelineFSM",
     "TransitionKind",
 ]

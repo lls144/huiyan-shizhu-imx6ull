@@ -61,12 +61,33 @@ class LinuxInputConfig:
 
 
 @dataclass(frozen=True)
+class LedOutputConfig:
+    """Unprivileged Controller connection details; helper policy remains root-owned."""
+
+    enabled: bool
+    socket_path: str
+
+    @classmethod
+    def from_dict(cls, value: object) -> "LedOutputConfig":
+        if not isinstance(value, dict):
+            raise ValueError("led_output must be an object")
+        enabled = value.get("enabled", False)
+        socket_path = value.get("socket_path", "/run/huiyan-led/helper.sock")
+        if type(enabled) is not bool:
+            raise ValueError("led_output.enabled must be a boolean")
+        if not isinstance(socket_path, str) or not socket_path.startswith("/"):
+            raise ValueError("led_output.socket_path must be an absolute path")
+        return cls(enabled, socket_path)
+
+
+@dataclass(frozen=True)
 class ControllerConfig:
     tcp_port: int
     fifo_capacity: int
     heartbeat_interval: int
     gpio: GpioKeyConfig
     linux_input: LinuxInputConfig
+    led_output: LedOutputConfig
 
     @classmethod
     def from_dict(cls, value: object) -> "ControllerConfig":
@@ -87,6 +108,7 @@ class ControllerConfig:
             heartbeat_interval,
             GpioKeyConfig.from_dict(value.get("gpio")),
             LinuxInputConfig.from_dict(value.get("linux_input", {})),
+            LedOutputConfig.from_dict(value.get("led_output", {})),
         )
 
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from device.imx6ull.config import ControllerConfig, load_controller_config
 from device.imx6ull.controller_main import build_runtime
 from device.imx6ull.core.key_input import GpioKeyInput, KeyInputStatus, KeyboardKeyInput, LinuxInputKeyInput
+from device.imx6ull.output import NullBranchOutputBackend
 
 
 CONFIG_PATH = Path(__file__).parents[1] / "config" / "controller.json"
@@ -24,6 +25,8 @@ class DeploymentPreparationTests(unittest.TestCase):
         self.assertEqual(config.gpio.to_mapping(), {"key1": 24, "key2": 25, "key3": 26})
         self.assertEqual(config.linux_input.device_name, "huiyan-keys")
         self.assertEqual(config.linux_input.to_mapping(), {148: "KEY1", 149: "KEY2", 202: "KEY3"})
+        self.assertFalse(config.led_output.enabled)
+        self.assertEqual(config.led_output.socket_path, "/run/huiyan-led/helper.sock")
 
     def test_invalid_config_is_rejected(self) -> None:
         payload = {
@@ -49,6 +52,8 @@ class DeploymentPreparationTests(unittest.TestCase):
         imx6ull = build_runtime(config, "imx6ull", host="127.0.0.1")
         self.assertIsInstance(desktop.key_input, KeyboardKeyInput)
         self.assertIsInstance(imx6ull.key_input, LinuxInputKeyInput)
+        self.assertIsInstance(desktop.output_dispatcher.backend, NullBranchOutputBackend)
+        self.assertIsInstance(imx6ull.output_dispatcher.backend, NullBranchOutputBackend)
         self.assertEqual(desktop.server.port, config.tcp_port)
         self.assertEqual(imx6ull.key_input.poll().status, KeyInputStatus.UNAVAILABLE)
 

@@ -1,0 +1,6 @@
+{
+  "socket_path": "/run/huiyan-led/helper.sock",
+  "socket_mode": "0660",
+  "socket_group": "huiyan-led",
+  "duration_ms": 1000
+}

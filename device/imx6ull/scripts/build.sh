@@ -13,5 +13,6 @@ cd "$project_dir"
   device/imx6ull/config/*.py \
   device/imx6ull/core/*.py \
   device/imx6ull/network/*.py \
+  device/imx6ull/output/*.py \
   pc/communication/*.py
 "$python_bin" -m unittest device.imx6ull.tests.test_python37_compat

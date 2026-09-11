@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 SHAPES = frozenset({"triangle", "circle", "rectangle"})
+BRANCHES = frozenset({"Branch1", "Branch2", "Branch3"})
 
 
 @dataclass(frozen=True)
@@ -57,3 +58,22 @@ class CoreResult:
     pipeline_state: Dict[str, Any]
     command: Optional[Command] = None
     branch: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class BranchOutputEvent:
+    """A completed sort for the output layer; it contains no GPIO detail."""
+
+    branch: str
+
+    def __post_init__(self) -> None:
+        if self.branch not in BRANCHES:
+            raise ValueError("branch must be Branch1, Branch2, or Branch3")
+
+
+@dataclass(frozen=True)
+class OutputOffEvent:
+    """Request that the output layer immediately clear its display."""
+
+
+OutputEvent = Union[BranchOutputEvent, OutputOffEvent]
