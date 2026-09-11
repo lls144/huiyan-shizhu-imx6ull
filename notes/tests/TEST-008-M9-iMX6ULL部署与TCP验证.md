@@ -43,4 +43,4 @@ status: PASS_WITH_GPIO_PENDING
 
 ## 结论与限制
 
-软件 Controller 的 Python 3.7 部署、导入、编译和真实网络 TCP 验收通过。此记录不证明任何实体按键、GPIO 输入、GPIO 输出或接线；它们仍是 M9 的未完成前置。因此 M9 总体保持 **DOING**，不能写为 DONE。
+软件 Controller 的 Python 3.7 部署、导入、编译和真实网络 TCP 验收通过。此记录本身不证明任何实体按键、GPIO 输入、GPIO 输出或接线；这些证据后来分别由 TEST-009、TEST-010 和 TEST-011 补齐。2026-09-11 起，i.MX6ULL M9 路线已由 TEST-011 标记 DONE。

@@ -24,12 +24,12 @@ M4 不重新处理图像，只接收 M3 detections。目标先按 label 隔离�
 - 课程实验中的纸板目标主要静止或缓慢摆放，不需要复杂运动模型。
 - label 加空间位置支持同类多个对象，优于全局 `last_label`。
 - 纯 frame index 规则使离线测试确定，不依赖 `sleep()` 或系统时间。
-- 与 M3 的边界清晰，后续 GUI、Fake PLC 和通信只消费事件，不应消费每帧 detection。
+- 与 M3 的边界清晰，后续 GUI 和通信只消费事件，不应消费每帧 detection。
 
 ## 明确不做
 
 - 不使用 Kalman、SORT/DeepSORT、optical flow、ReID 或深度学习。
-- 不建立 PLC 协议序号、FIFO、ACK、重发或队列满处理。
+- 不建立控制器协议序号、FIFO、ACK、重发或队列满处理。
 - 不为交叉、快速运动或遮挡恢复无限优化。
 - 不以离线模拟代替真实摄像头生命周期验收。
 

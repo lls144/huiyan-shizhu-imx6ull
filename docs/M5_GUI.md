@@ -2,7 +2,7 @@
 
 ## 当前状态与边界
 
-M5 为 `DONE`。离线软件、线程生命周期、异常处理、自动化测试和 60 秒 synthetic soak 已完成；2026-09-07 的真实 Insta360 摄像头 GUI 又完成连续刷新、信息同步、性能和 Stop→Idle 正常关闭验收。本模块不包含 Fake PLC、通信、FIFO、ACK、心跳或重发。
+M5 为 `DONE`。离线软件、线程生命周期、异常处理、自动化测试和 60 秒 synthetic soak 已完成；2026-09-07 的真实 Insta360 摄像头 GUI 又完成连续刷新、信息同步、性能和 Stop→Idle 正常关闭验收。本模块不承担 Controller FIFO 或实体执行逻辑。
 
 ## 数据流与线程边界
 

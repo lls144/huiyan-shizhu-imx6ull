@@ -70,7 +70,7 @@ soak 由真实 `.venv` 进程运行，但输入是 synthetic、Qt 平台是 offs
 - M3 synthetic：4 个强制光照场景、两种方案均精确输出三类，`all_required_scenes_pass=true`；遮挡/接触局限未改写。
 - M4：12/12 detection-sequence 场景通过，`failing_scenarios=0`。
 - `pip check`：`No broken requirements found.`。
-- 同次 M5 synthetic/offscreen 冒烟 5.021020 秒、87 帧、0 failed read、`error=null`、正常关闭；其 17.327158 FPS 只作为短时功能回归，不替代真实 camera 的 29.315668 FPS 性能验收。M6 16/16 且确定性重放；完整摘要见 `../../evidence/data/m3-m5-final-regression-summary.json`。
+- 同次 M5 synthetic/offscreen 冒烟 5.021020 秒、87 帧、0 failed read、`error=null`、正常关闭；其 17.327158 FPS 只作为短时功能回归，不替代真实 camera 的 29.315668 FPS 性能验收。
 
 ### Part A 证据
 
@@ -121,7 +121,7 @@ session 原样记录 `git.dirty=true`；审计开始时没有 tracked diff，只
 - M3 五场景：`../../evidence/data/m3/live/`、`../../evidence/screenshots/m3/live/`
 
 > [!success] 验收结论
-> Part A 与 Part B 均满足原定验收条件，GUI-001 与 M5 为 `DONE`。这不包含 Fake PLC、通信、FIFO、ACK、心跳、重发或真实 PLC 功能。
+> Part A 与 Part B 均满足原定验收条件，GUI-001 与 M5 为 `DONE`。这不包含通信、FIFO、ACK、心跳或重发功能。
 
 ## 关联记录
 

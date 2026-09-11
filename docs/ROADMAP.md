@@ -1,118 +1,28 @@
-# 项目路线图
+# 产品路线图
 
-状态取值：`TODO / DOING / DONE / BLOCKED`。只有满足验收标准并留下真实证据，milestone 才能标记 `DONE`。
+当前产品闭环：
 
-## M0 项目初始化 — DONE
+```text
+Windows PC Vision -> Ethernet TCP -> i.MX6ULL Controller
+-> FIFO / three-station FSM -> physical keys -> RGB indication
+-> LCD HMI -> Windows sorting animation
+```
 
-- **输入条件**：原始任务书、项目初始化要求、可用 Git/Python 环境。
-- **实现任务**：读取任务书；建立需求规格、长期协作规则、README、环境记录、Obsidian Vault、证据链、目录与 Git 仓库。
-- **验收标准**：任务书需求有唯一 ID；未知项未被猜测；没有虚构实验结果；目录与文档进入初始 commit。
-- **所需真实硬件**：无。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE（仅表示初始化完成，不代表任何功能完成）。
+| Milestone | Scope | Status |
+|---|---|---|
+| M3 | Shape recognition | DONE |
+| M4 | Object lifecycle / `OBJECT_ENTER` event | DONE |
+| M5 | Windows visual control interface baseline | DONE |
+| M7 | TCP Controller protocol | DONE |
+| M8 | FIFO and three-station pipeline FSM | DONE |
+| M9 | i.MX6ULL physical keys, RGB output and vision-to-board loop | DONE |
+| M10 | i.MX6ULL LCD Qt HMI and Goodix touch RESET | DONE |
+| Final demo | Windows Ethernet profile, packaging and live sorting animation | DOING |
 
-## M1 USB 摄像头稳定采集 — DONE
+## Current delivery focus
 
-- **输入条件**：Insta360 Ace Pro 2、USB 线、三脚架、A3 白色背景；确认 Webcam 模式操作方法。
-- **实现任务**：枚举设备；建立可配置采集模块；测量可用分辨率、帧率、延迟和持续运行稳定性；保存代表性样帧。
-- **验收标准**：目标电脑可重复打开/关闭摄像头并稳定采集；设备 ID 不硬编码；真实参数和失败情况进入测试记录。
-- **所需真实硬件**：USB 摄像头及固定装置。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE。2026-09-03 使用 Insta360 Ace Pro 2、DirectShow、MJPG、1920×1080@30 完成 60 秒测试：1793/1793 帧成功，实测 29.869 fps，最大成功帧间隔 0.069 s，3/3 次重新打开成功。该次 M1 测试未验证固定白色工作区；后续 M2 已完成两种机位下的真实视觉验收，但背景板是否严格为 A3 及其材质仍未单独测量。
-
-## M2 单目标轮廓识别 — DONE
-
-- **输入条件**：M1 稳定采集；三角形、矩形、圆形纸板样本；固定背景。
-- **实现任务**：灰度化、二值化、边缘检测、轮廓提取/分割；基于 `approxPolyDP` 的三类分类；定义置信度含义。
-- **验收标准**：三类单目标均有可复现识别记录；中间图、参数、失败样例和单元测试齐全。
-- **所需真实硬件**：摄像头、三类纸板物体、背景板。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE。10 张真实离线图片回归为 10/10；原机位 manual ROI 与改变机位后的 auto ROI 两轮共 8 个实时工况均与真实输入一致。两个 session 均完成且 `failed_reads=0`、`error=null`。ROI 采用“启动校准 → 运行锁定”，相机重新架设时重新校准；不逐帧追踪。证据见 TEST-002、TEST-003、`evidence/screenshots/m2/` 和 `evidence/data/m2-live-acceptance-summary.json`。
-
-## M3 多目标识别与抗光照 — DONE
-
-- **输入条件**：M2 分类管线；至少 2 个物体；可控的多种光照条件。
-- **实现任务**：单帧多轮廓处理、目标筛选、抗光照方案对比、遮挡和粘连情况记录。
-- **验收标准**：同屏至少 2 个目标可独立输出；完成多种光照的真实对比测试；参数与局限可追溯。
-- **所需真实硬件**：摄像头、多个纸板物体、背景板、可调整照明。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE。2026-09-07 在 Insta360 Ace Pro 2、1920×1080、manual/selected ROI 下保存并审计 5 个真实场景。正常、较亮/侧光、较暗三种分离场景中 Otsu 与 CLAHE+Otsu 均为 3 个对象且精确输出 `circle, rectangle, triangle`；CLAHE 未体现额外分类正确性收益，故 Otsu 保持默认，CLAHE+Otsu 保留为对照/诊断。部分遮挡时两种方法均输出 `circle, unknown, triangle`；矩形与圆形接触时均输出 `unknown, triangle`，如实保留为 `RETR_EXTERNAL` 外轮廓局限。原帧、两种标注图、JSON/CSV 与测试记录可追溯。
-
-## M4 防重复识别/事件生成 — DONE
-
-- **输入条件**：M3 多目标输出；已定义目标 ID/事件模型。
-- **实现任务**：把逐帧检测转为离散入队事件；处理目标停留、短暂丢失和重复检测。
-- **验收标准**：同一物体持续停留不产生重复入队；移除再放入的规则明确并有自动化/录像测试。
-- **所需真实硬件**：摄像头与样本；可先用录像/图片开发。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE。除原有 12 个离线 detection-sequence 场景外，2026-09-07 真实 camera GUI session 记录 117 个事件且 event ID 1～117 连续；每个 object 至多一个 ENTER 和一个 EXIT。重点 circle 生命周期为 frame 31606 `ENTER #75`、frame 33660 `EXIT #75`、frame 33928 `ENTER #76`；#75 在 2050 次命中期间无重复 ENTER，离场后重入分配新 ID。短暂遮挡保持 ID 由现场人工观察与 GUI 截图支持，session 未保存该区段逐帧 snapshot，因此不伪装为 JSON 单独证明。M4 完成仅指 PC 事件子能力；PLC-002 整体仍未完成。
-
-## M5 GUI 上位机 — DONE
-
-- **输入条件**：M1–M4 稳定 API；确认 PySide6 选型。
-- **实现任务**：显示实时画面、识别结果、置信度和必要状态；处理线程/生命周期与异常提示。
-- **验收标准**：持续运行无明显阻塞；画面和识别信息同步；性能和恢复行为有实测记录。
-- **所需真实硬件**：摄像头。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE。PySide6 6.11.2 的离线自动化与 synthetic soak 保持通过；2026-09-07 使用 Insta360 Ace Pro 2 真实运行 1577.142974 秒，读取/处理/GUI 更新均为 46235 帧，processing 与 GUI update 均为 29.315668 FPS，0 failed read、0 display drop、0 buffer overwrite、`error=null`，Stop 后 `clean_shutdown=true`。running 截图显示真实画面、label/confidence、#76 状态、事件、29.3 FPS、ROI manual 和 No errors；Idle 截图确认 Stop 后正常停止。启动 auto ROI 未找到合格中央白色四边形，按设计降级 manual，ROI `[548,126,1346,698]` 在整次运行中锁定。Qt 的 `QFont::setPointSize Point size <=0 (-1)` 为现场控制台非阻断 UI warning，不是视觉或摄像头错误。
-
-## M6 Fake PLC 模拟器 — DONE
-
-- **输入条件**：初版指令模型和队列语义。
-- **实现任务**：模拟 FIFO、确认/超时、队列满、心跳和断连，以便无实验室 PLC 时开发。
-- **验收标准**：可脚本化重现正常、满队列、丢包/延迟和心跳中断场景；行为与协议草案一致。
-- **所需真实硬件**：无。
-- **是否可在宿舍完成**：是。
-- **当前状态**：DONE。2026-09-05 明确授权后完成协议无关模型、FIFO、设备侧重复保护、虚拟毫秒时钟、内存链路、确定性故障计划和 M4 实际事件集成。16/16 CLI 场景及逐字段重放通过，62 项 M6 测试、172 项全量测试通过。证据见 TEST-007、`evidence/data/m6/`。本阶段只证明软件模拟语义；后续 i.MX6ULL Controller M7/M8 已另行完成，M9 输出与共享 PLC 接口仍未完成。
-
-## M7 PC–Controller TCP 通信 — DONE
-
-- **输入条件**：M4 语义事件模型、M6 的 command/response 语义，以及 i.MX6ULL 网络环境的设计约束。
-- **实现任务**：定义并实现 PC TCP client、i.MX6ULL TCP server 的消息边界、命令编码、ACK 和状态反馈；保留 M6 语义模型，不把内存链路当作真实网络。
-- **验收标准**：协议、时序和测试向量可审阅；三类语义命令与 ACK 能在 PC 和控制器间稳定收发。
-- **所需真实硬件**：设计与 PC 端测试可先使用本地替身；最终需 i.MX6ULL 以太网环境。
-- **当前状态**：DONE。协议实现为 `d97e0c9`，Controller/客户端回归已通过；2026-09-10 在真实野火 i.MX6ULL 的 `198.51.100.2:9000` 上完成 heartbeat、状态、三类 enqueue、FIFO full、duplicate、reset、顺序和 reconnect 共 10 项 smoke（TEST-008）。这只关闭 PC–Controller TCP 路线，不关闭真实 PLC 通信需求。
-
-## M8 FIFO 与三级流水线状态机 — DONE
-
-- **输入条件**：M7 的已验证消息语义和控制器侧状态模型。
-- **实现任务**：实现容量、顺序、满/空边界明确的 FIFO，以及可观察的三级流水线状态机和分支控制逻辑。
-- **验收标准**：正常、满、空、重复指令和逐级流转均有可重复的单元/集成测试；状态转换与命令 ID 可追踪。
-- **所需真实硬件**：核心逻辑可先在主机测试；实体执行验证在后续 i.MX6ULL 阶段完成。
-- **当前状态**：DONE。实现为 `e47f27f`，覆盖容量/顺序、空满、duplicate、reset、三类路线与错误工位保持状态的回归全部通过；TEST-008 验证真实网络 FIFO，TEST-009 验证实体三按键进入同一 FSM 后完成 Branch1/2/3。实体输出不属于本里程碑结论，仍由 M9 完成。
-
-## M9 i.MX6ULL Linux 部署与 GPIO — DOING
-
-- **输入条件**：可用的 i.MX6ULL Linux 镜像、交叉编译或原生构建环境，以及已确认的 GPIO/LCD 硬件信息。
-- **实现任务**：部署控制器服务，接入 GPIO 按键和分支控制所需 I/O；记录 UART 调试、网络、引脚与构建环境。
-- **验收标准**：目标板可重复部署和运行；按键输入与 GPIO 输出有真实硬件记录，不把主机模拟结果标为板端验证。
-- **所需真实硬件**：i.MX6ULL 开发板、以太网、UART 调试链路和已确认的 GPIO 接线。
-- **当前状态**：DOING。2026-09-10 已在真实野火 i.MX6ULL（Debian 10、Python 3.7.3）完成最小 Controller 部署、板端 compileall、`0.0.0.0:9000` 监听以及 Ubuntu 经 USB Gadget Ethernet 到 `198.51.100.2:9000` 的 10 项 TCP smoke。实体 KEY1/2/3 已通过确认的 `gpiochip0` lines 24/25/26、`gpio-keys`、`huiyan-keys` Linux input 和 Controller FSM 验证；应用不硬编码 `eventX`。GPIO 输出/分支硬件、其接线和真实输出证据仍 TODO，故 M9 不能标记 DONE。见 `docs/IMX6ULL_DEPLOYMENT.md`、`notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md` 与 `notes/tests/TEST-009-M9-iMX6ULL实体GPIO按键验收.md`。
-
-## M10 Qt LCD HMI — TODO
-
-- **输入条件**：M8 的稳定控制器状态与 M9 的目标板图形/显示环境。
-- **实现任务**：实现 Qt LCD HMI，显示连接、FIFO、流水线、按键、故障和分支状态。
-- **验收标准**：LCD 上的状态与控制器状态一致；启动、运行、故障和恢复界面均有可复现验证。
-- **所需真实硬件**：i.MX6ULL、兼容 LCD 与已配置的 Qt 运行环境。
-- **当前状态**：TODO。
-
-## M11 可靠性机制 — TODO
-
-- **输入条件**：M7–M10 的基础通信、控制器状态和可控故障注入环境。
-- **实现任务**：实现 heartbeat、ACK、超时重试、幂等去重、断连恢复、队列满流控和状态反馈；优先复用 M6 的已验证语义与故障场景。
-- **验收标准**：丢包、迟到 ACK、断连、恢复和满队列场景均有时间戳日志与可重复测试；不得产生重复入队或未说明的状态丢失。
-- **所需真实硬件**：开发可使用受控替身；最终需 PC 与 i.MX6ULL 实际网络验证。
-- **当前状态**：TODO。
-
-## M12 真实视觉到实体控制器闭环 — TODO
-
-- **输入条件**：M1–M5 PC 视觉基线与 M7–M11 控制器路线均已通过各自验收。
-- **实现任务**：完成“真实摄像头识别 → 语义命令 → TCP → i.MX6ULL FIFO/流水线 → GPIO 分支与 LCD 状态反馈”的端到端演示。
-- **验收标准**：三类对象的端到端链路可通过事件 ID 或时间戳追踪；正常、连续输入和故障恢复情形有真实设备证据。
-- **所需真实硬件**：摄像头、PC、i.MX6ULL、以太网、GPIO 外设和 LCD。
-- **当前状态**：TODO。
-
-## PLC 历史路线说明
-
-`plc/`、PLC 分工资料和原有实验记录完整保留，便于追溯原始项目方案与已完成的文档工作。它们不是 M7–M12 的当前控制器开发目标；本路线调整的依据见 `docs/decisions/DECISION-IMX6ULL-001.md`。
+1. Use the Windows Ethernet profile at `pc/config/controller_windows_ethernet.json`.
+2. Complete Windows-side RJ45 connectivity and GUI animation validation; the
+   board `eth1` persistent profile is already verified.
+3. Keep USB Gadget `198.51.100.2` as the Ubuntu maintenance path.
+4. Finish the Windows presentation animation without changing the verified Controller, FIFO, key, LED or HMI semantics.

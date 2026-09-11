@@ -1,0 +1,9 @@
+{
+  "profile_name": "Windows demo Ethernet",
+  "interface": "eth1",
+  "stable_mac": "02:00:00:00:00:01",
+  "address": "203.0.113.2",
+  "netmask": "255.255.255.0",
+  "gateway": "0.0.0.0",
+  "nameservers": []
+}

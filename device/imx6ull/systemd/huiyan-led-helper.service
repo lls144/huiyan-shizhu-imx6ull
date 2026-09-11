@@ -1,0 +1,23 @@
+[Unit]
+Description=Huiyan restricted board-LED helper
+After=local-fs.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/huiyan-led-helper
+ExecStart=/usr/bin/python3 -m device.imx6ull.output.led_helper --config /etc/huiyan-led-helper.json
+Restart=on-failure
+RestartSec=2
+UMask=0007
+NoNewPrivileges=true
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE
+# The i.MX6ULL Debian 10 kernel cannot create the mount namespace required by
+# ProtectSystem/PrivateTmp/ReadWritePaths (systemd status=226/NAMESPACE).  The
+# root-owned, 0644 code/config, direct fixed ExecStart, capability bound and
+# strict socket protocol remain the effective least-privilege boundary here.
+
+[Install]
+WantedBy=multi-user.target

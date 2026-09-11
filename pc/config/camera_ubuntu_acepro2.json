@@ -1,0 +1,15 @@
+{
+  "device_name": "Insta360 Ace Pro 2",
+  "device_path": "/dev/video2",
+  "fallback_index": null,
+  "backend": "V4L2",
+  "requested_width": 1920,
+  "requested_height": 1080,
+  "requested_fps": 30.0,
+  "fourcc": "MJPG",
+  "warmup_frames": 15,
+  "test_duration_seconds": 60.0,
+  "reopen_cycles": 3,
+  "minimum_read_success_rate": 0.99,
+  "maximum_frame_gap_seconds": 2.0
+}

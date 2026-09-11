@@ -1,144 +1,53 @@
-# i.MX6ULL Controller Deployment and M9 Verification
+# i.MX6ULL deployment and runtime
 
-状态：**M9 DOING**。2026-09-10 已完成 i.MX6ULL 上的 Python 3.7.3 兼容部署、真实 USB Gadget Ethernet TCP 验证，以及三枚实体按键从 `gpio-keys` 到 Controller FSM 的验证。GPIO 分支输出硬件和完整实体执行链路尚未验证，故不能将 M9 整体标记为 DONE。
+## Board baseline
 
-## Deployment baseline
+- Wildfire i.MX6ULL, Debian GNU/Linux 10, armv7l, kernel 4.19.35-imx6, Python 3.7.3.
+- Controller listens on `0.0.0.0:9000` through `huiyan-controller.service` as ordinary `debian`.
+- `huiyan-led-helper.service` is the restricted root-only RGB Linux LED-class helper.
+- `huiyan-hmi.service` is an ordinary-user PySide2/linuxfb HMI service; LCD is 800×480 and Goodix touch is discovered dynamically.
+- `huiyan-keys` provides verified physical KEY1/KEY2/KEY3 input. Project overlay and existing LCD/touch/LED overlays are already enabled; no deployment script edits boot configuration.
 
-| Item | Verified value |
-|---|---|
-| board | Wildfire i.MX6ULL |
-| OS | Debian GNU/Linux 10 (buster) |
-| arch / kernel | armv7l / 4.19.35-imx6 |
-| RAM | 486 MiB |
-| Python | `/usr/bin/python3`, Python 3.7.3 |
-| controller IP | 198.51.100.2 |
-| transport | USB Gadget Ethernet (dev-host Ubuntu ↔ i.MX6ULL) |
-| TCP listener | `0.0.0.0:9000` |
-| SSH | alias `imx6ull`, non-interactive public-key authentication |
-| input permission | `debian` is a member of group `input` (`id` includes `106(input)`), permitting reads of `/dev/input/event*` |
-| GPIO input | `gpiochip0` lines 24/25/26, active-low, verified through `gpio-keys` as `huiyan-keys` |
-| GPIO output | board-LED scheme audited only; no output implementation or physical test |
+## Networking
 
-The earlier safe-deployment configuration had no GPIO number and remained `NOT_CONFIGURED`. After the real mapping and wiring were confirmed, the committed configuration uses only the verified Linux input device name `huiyan-keys` and input key codes; the application does not open GPIO chips or hard-code an `eventX` number.
+- USB maintenance: `usb0`, `198.51.100.2/30`; keep intact.
+- Demo RJ45 profile: `203.0.113.2/24`, no gateway/DNS; see `docs/WINDOWS_ETHERNET_DEMO.md`.
+- The actual demo RJ45 port is `eth1` (`platform-2188000.ethernet`). Its
+  kernel MAC is random without a dedicated link policy. First install the
+  script's stable-MAC policy and reboot, then apply the ConnMan static profile.
+  The policy uses `02:00:00:00:00:01`, is matched only to `eth1`, and does not
+  change `usb0`.
+- Apply/check the board profile with `device/imx6ull/scripts/configure_demo_ethernet.sh`; it requires an explicit interface and creates timestamped backups of the relevant ConnMan settings and link policy.
 
-## Python 3.7.3 compatibility work
+### Verified persistent RJ45 profile — 2026-09-11
 
-Implementation commit: `9906133a6db4e5391704fadf3c3b94b0b893b765`.
+- Physical carrier identified the demo port as `eth1`; `eth2` remained down.
+- A narrow `/etc/systemd/network/10-huiyan-demo-eth1.link` policy fixes only
+  `eth1` to `02:00:00:00:00:01`. This is necessary because the FEC otherwise
+  reports a kernel-random MAC and ConnMan consequently changes its service ID
+  on every boot.
+- After a normal reboot, ConnMan restored service
+  `ethernet_020000000001_cable` with manual `203.0.113.2/24`,
+  `Gateway=0.0.0.0`, and no configured DNS servers.
+- `usb0` remained `198.51.100.2/30`; USB SSH and a TCP heartbeat to port 9000
+  passed. Controller, HMI and LED-helper services all restarted active.
 
-- Replaced `enum.StrEnum` with `str, Enum` for wire-visible enum values.
-- Replaced PEP 604 and PEP 585 annotations with `Optional`/`Union` and `Dict`/`Deque`/`Tuple`/`Set` from `typing`, including the protocol module used by the board.
-- Kept the protocol fields, FIFO capacity/order, duplicate-ID handling, reset semantics and Pipeline FSM routes unchanged.
-- Made `controller_main.py` add the repository root only when executed as a script, so both `python3 device/imx6ull/controller_main.py` from the deployment root and `python3 -m device.imx6ull.controller_main` work without an externally supplied `PYTHONPATH`.
-- Added a standard-library static compatibility test that rejects `StrEnum`, PEP 604 unions and PEP 585 builtin generics in the board runtime and its imported protocol package; it also executes the direct entrypoint import path.
+The first static-profile backup is
+`/var/backups/huiyan-demo-ethernet/20260911T160638+0800-eth1`.
+For any later script-generated backup, use the printed directory with
+`sudo .../configure_demo_ethernet.sh --rollback BACKUP_DIRECTORY`; a
+stable-MAC-policy rollback requires one normal reboot. This board-side result
+is not Windows Ethernet end-to-end evidence.
 
-## Minimal transfer
-
-The deployment command is:
-
-```bash
-IMX6ULL_HOST=imx6ull IMX6ULL_REMOTE_DIR=/home/debian/huiyan-shizhu \
-  device/imx6ull/scripts/deploy.sh
-```
-
-It creates the needed remote directories with SSH and transfers only this explicit 17-file runtime manifest with SCP:
-
-- `device/__init__.py`, `device/imx6ull/{__init__.py,controller_main.py}`;
-- `device/imx6ull/config/`, `core/`, and `network/` Python sources plus `controller.json`;
-- `pc/__init__.py` and `pc/communication/{__init__.py,protocol.py}`.
-
-It excludes tests, `.venv`, `__pycache__`, pytest caches, visual/GUI code, models, datasets, videos, evidence and documents. `compileall` may subsequently create board-local `__pycache__`; it was not transferred.
-
-## 2026-09-10 real-board verification
-
-Test record: `notes/tests/TEST-008-M9-iMX6ULL部署与TCP验证.md`. Test time was 2026-09-10 20:27:52–20:27:54 +08:00.
-
-On the physical board, from `/home/debian/huiyan-shizhu`:
+## Verification
 
 ```bash
-python3 --version
-python3 -m compileall /home/debian/huiyan-shizhu/
-python3 device/imx6ull/controller_main.py --mode imx6ull \
-  --config device/imx6ull/config/controller.json --host 0.0.0.0
+cd /home/debian/huiyan-shizhu
+./device/imx6ull/scripts/final_smoke_check.sh
 ```
 
-Actual results:
+Expected result is `OVERALL ............ PASS`. It only reads status; it never resets, enqueues, drives LEDs or consumes input.
 
-- `Python 3.7.3`; `compileall` compiled all 17 deployed runtime files and returned 0 (rechecked with `-q`, exit 0).
-- Direct entrypoint import check: PASS.
-- Safe GPIO configuration check: `{'key1': None, 'key2': None, 'key3': None}`, status `NOT_CONFIGURED`.
-- Controller process PID 2011 listened on `0.0.0.0:9000`, verified by `ss -ltn`.
+## Known display rule
 
-From the Ubuntu PC, the dependency-free smoke client addressed **`198.51.100.2:9000`**, not localhost or a fake controller. All 10 checks passed:
-
-| Check | Actual result |
-|---|---|
-| heartbeat | `ack/alive` |
-| pipeline_state | `idle`, empty FIFO, capacity 3 |
-| enqueue triangle / circle / rectangle | three `accepted` ACKs in that order |
-| FIFO full | fourth command returned `queue_full` |
-| duplicate command_id | command ID 101 returned `duplicate` while the queue was full |
-| reset | `reset` ACK; FIFO empty and `idle` |
-| FIFO order | protocol `key_event` sorted triangle ID 201 before circle ID 202; circle followed KEY1 → Station2, KEY2 → Branch2 |
-| disconnect / reconnect | new TCP connection received `ack/alive` |
-
-`key_event` is a pre-existing TCP controller protocol test interface. It verifies the software FSM over the real board network only; it is not evidence of a physical key press or GPIO event.
-
-## 2026-09-10 gpio-keys and physical-key verification
-
-Test record: `notes/tests/TEST-009-M9-iMX6ULL实体GPIO按键验收.md`. This section is distinct from the TCP `key_event` injection above: its raw events came from the entity board's `/dev/input` device.
-
-### Safe board integration
-
-- The official `/usr/lib/linux-image-4.19.35-imx6/overlays/imx-fire-key.dtbo` was inspected but neither edited nor replaced.
-- Project overlay: `device/imx6ull/overlay/huiyan-keys.dts`, compiled and installed as `/usr/lib/linux-image-4.19.35-imx6/overlays/huiyan-keys.dtbo` (SHA-256 `873653f867ce0727111498712ad4a5975d5f6fe655031ed9785b353c56e85350`).
-- The only added boot line is `dtoverlay=/usr/lib/linux-image-4.19.35-imx6/overlays/huiyan-keys.dtbo`; the pre-change file is retained on the board at `/home/debian/huiyan-shizhu/overlay-staging/20260910-huiyan-keys/uEnv.txt.before-huiyan-keys-20260910T212854+0800`.
-- The overlay changes neither the main DTB, U-Boot, existing overlays, nor any UART3 device node. It uses only these confirmed free UART3 pads as GPIO inputs: `MX6UL_PAD_UART3_TX_DATA__GPIO1_IO24`, `MX6UL_PAD_UART3_RX_DATA__GPIO1_IO25`, and `MX6UL_PAD_UART3_CTS_B__GPIO1_IO26`.
-- Its `fsl,pins` setting is `0x0001b0b1`: HYS is enabled; PKE enables the pull/keeper circuit; PUE separately selects pull rather than keeper; and the selected resistor is the internal 100 KOhm pull-up. This is required by the passive button-to-GND wiring. `GPIO_ACTIVE_LOW` makes released keys logical high at the GPIO layer and pressed keys logical active in the Linux input layer. UART3's official overlay remains disabled, so these three UART3 pads remain assigned only to this project input overlay.
-- Each gpio-keys child uses a 20 ms debounce interval. Linux input codes are KEY1 → `KEY_PROG1` / 148, KEY2 → `KEY_PROG2` / 149, KEY3 → `KEY_PROG3` / 202.
-
-After reboot, `gpioinfo gpiochip0` showed lines 24, 25 and 26 as the active-low, in-use `Huiyan KEY1`, `Huiyan KEY2` and `Huiyan KEY3` inputs. `/proc/bus/input/devices` registered `Name="huiyan-keys"` (it happened to be `event1` for this boot, but that number is not used by the application). The stable board symlink was `/dev/input/by-path/platform-huiyan-keys-event`.
-
-### Actual physical evidence
-
-The standard-library capture program (`device/imx6ull/scripts/capture_input_events.py`) found the device by its sysfs name and read Linux `input_event` records. It produced the board log `/home/debian/huiyan-shizhu/overlay-staging/20260910-huiyan-keys/huiyan-keys-input-events-20260910T214016+0800.log` while the operator pressed and released each wired mechanical key once.
-
-| Physical key | Linux input code | observed values | Result |
-|---|---:|---|---|
-| KEY1 | 148 (`KEY_PROG1`) | `1`, then `0` | PASS |
-| KEY2 | 149 (`KEY_PROG2`) | `1`, then `0` | PASS |
-| KEY3 | 202 (`KEY_PROG3`) | `1`, then `0` | PASS |
-
-Exactly six EV_KEY records were captured: one press and one release for each key, with no unexpected duplicate or bounce event. This proves the physical active-low wiring is translated correctly: press is input value `1`, release is input value `0`.
-
-### Controller integration and physical FSM closure
-
-`LinuxInputKeyInput` is a Python 3.7 standard-library backend. It locates `huiyan-keys` dynamically via `/sys/class/input/event*/device/name`, reads `struct input_event` with `os`/`select`/`struct`, maps only the three verified key codes, and feeds only `EV_KEY value == 1` to the existing FSM. It ignores releases and suppresses kernel repeat values until release, so it neither hard-codes `/dev/input/event1` nor changes the TCP protocol, FIFO, duplicate-ID or reset semantics.
-
-With the deployed controller listening on `0.0.0.0:9000`, real TCP commands enqueued triangle 301, circle 302 and rectangle 303. Physical keys then drove the existing FSM: KEY1 sorted triangle to Branch1; KEY1 then KEY2 sorted circle through Station2 to Branch2; and KEY1 then KEY2 then KEY3 sorted rectangle through Stations 2/3 to Branch3. The early out-of-order presses recorded `wrong_station` without changing FIFO order or corrupting state; the later correct presses completed all three items. A two-second held KEY1 yielded only one `empty` FSM input after the queue had drained; a rapid double press after enqueuing triangle 401 yielded exactly `sorted Branch1`, then `empty`. A final real-network TCP smoke test still passed all 10 checks, including reset and reconnect.
-
-## 2026-09-10 board-LED output audit — NOT YET VERIFIED
-
-This was a read-only board audit, not an output test. The enabled official `imx-fire-led.dtbo` already registers three independent `gpio-leds` with trigger `none`; it was not modified. The recommended future Branch display pattern is Branch1/triangle = red (one lamp), Branch2/circle = red + green (two lamps), and Branch3/rectangle = red + green + blue (three lamps), preserving the task's 1/2/3-lamp requirement.
-
-| LED | GPIO mapping | polarity | Linux interface | current implementation/test status |
-|---|---|---|---|---|
-| red | GPIO1_IO04, gpiochip0 line 4 | active-low | `/sys/class/leds/red/brightness` | audited only |
-| green | GPIO4_IO20, gpiochip3 line 20 | active-low | `/sys/class/leds/green/brightness` | audited only |
-| blue | GPIO4_IO19, gpiochip3 line 19 | active-low | `/sys/class/leds/blue/brightness` | audited only |
-
-The future application must use the LED class and must not claim those kernel-owned lines through libgpiod. No new LED overlay is needed and `imx-fire-led.dtbo` must remain unchanged. At audit time, the brightness attributes were `root:root` mode `0644`, so the currently unprivileged Controller cannot yet write them. No LED helper, permission channel, systemd deployment, brightness write, 1/2/3-lamp observation, reset-all-off verification, or physical GPIO-output test has been implemented or performed.
-
-## Remaining M9 work
-
-1. Implement a restricted LED output abstraction.
-2. Implement a root-owned LED helper or equivalent minimum-privilege mechanism; do not run the TCP Controller as an unrestricted root service.
-3. Deploy and verify the helper with systemd.
-4. Observe red, green and blue individually on the physical board.
-5. Verify Branch1 = one lamp.
-6. Verify Branch2 = two lamps.
-7. Verify Branch3 = three lamps.
-8. Define and verify timeout-driven automatic all-off behavior.
-9. Verify reset immediately turns all lamps off.
-10. Verify the entity-key plus LED FSM loop.
-11. Run the PC vision → TCP → i.MX6ULL → physical key/sorting → LED end-to-end acceptance.
-12. Start M10 Qt LCD HMI only after M9 is complete. Until output and end-to-end evidence exist, M9 remains **DOING**.
+Never set `QT_QPA_FB_HIDECURSOR=1`. On this Qt 5.11 linuxfb stack it produces a native crash in `app.exec_()`.

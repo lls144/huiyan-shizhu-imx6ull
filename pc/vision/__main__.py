@@ -126,6 +126,19 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("pc/config/events.json"),
         help="M4 event association JSON config used only with --events",
     )
+    multi_live.add_argument(
+        "--controller-config",
+        type=Path,
+        help=(
+            "optional M9 PC-to-Controller JSON config; requires --events and "
+            "exactly one --expected-labels shape as a fail-closed live-test guard"
+        ),
+    )
+    multi_live.add_argument(
+        "--command-id-start",
+        type=int,
+        help="positive Controller command ID assigned to M4 event_id=1 for this run",
+    )
     multi_batch = subparsers.add_parser(
         "multi-batch",
         help="evaluate an M3 scene manifest with both preprocessing modes",
@@ -143,7 +156,8 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = _parser().parse_args()
+    parser = _parser()
+    args = parser.parse_args()
     config = load_vision_config(args.config)
     if args.command == "live":
         from .live import run_live_session
@@ -158,17 +172,44 @@ def main() -> int:
         )
     if args.command == "multi-live":
         from .m3_live import run_m3_live_session
+        event_sink = None
+        client = None
+        if args.controller_config is not None:
+            if not args.events:
+                parser.error("--controller-config requires --events")
+            if len(args.expected_labels) != 1:
+                parser.error("--controller-config requires exactly one --expected-labels shape")
+            if args.command_id_start is None or args.command_id_start < 1:
+                parser.error("--controller-config requires a positive --command-id-start")
+            from pc.communication.vision_bridge import (
+                VisionEventEnqueuer,
+                load_controller_connection_config,
+            )
 
-        return run_m3_live_session(
-            camera_config_path=args.camera_config,
-            vision_config=config,
-            requested_roi_mode=args.roi_mode,
-            calibration_path=args.calibration_file,
-            evidence_root=args.evidence_dir,
-            expected_labels=tuple(args.expected_labels),
-            reuse_calibration=args.reuse_calibration,
-            event_config_path=args.event_config if args.events else None,
-        )
+            connection = load_controller_connection_config(args.controller_config)
+            client = connection.make_client()
+            event_sink = VisionEventEnqueuer(
+                client,
+                args.command_id_start,
+                expected_labels=tuple(args.expected_labels),
+                result_timeout=connection.ack_timeout * (connection.max_retries + 2),
+            ).handle
+        try:
+            return run_m3_live_session(
+                camera_config_path=args.camera_config,
+                vision_config=config,
+                requested_roi_mode=args.roi_mode,
+                calibration_path=args.calibration_file,
+                evidence_root=args.evidence_dir,
+                expected_labels=tuple(args.expected_labels),
+                reuse_calibration=args.reuse_calibration,
+                event_config_path=args.event_config if args.events else None,
+                event_sink=event_sink,
+                stop_after_event_sink_accept=args.controller_config is not None,
+            )
+        finally:
+            if client is not None:
+                client.close()
     if args.command == "multi-batch":
         from .m3_reporting import (
             evaluate_synthetic_dataset,

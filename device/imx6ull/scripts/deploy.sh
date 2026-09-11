@@ -22,13 +22,18 @@ files=(
   device/imx6ull/core/pipeline.py
   device/imx6ull/network/__init__.py
   device/imx6ull/network/tcp_server.py
+  device/imx6ull/output/__init__.py
+  device/imx6ull/output/branch_output.py
+  device/imx6ull/output/protocol.py
   pc/__init__.py
   pc/communication/__init__.py
   pc/communication/protocol.py
 )
 
 # Copy an explicit manifest.  This deliberately excludes .venv, caches,
-# tests, visual modules/models, evidence and all non-controller sources.
+# tests, visual modules/models, evidence and all non-controller sources.  The
+# root-owned LED helper and its service/config are intentionally not deployed
+# through this unprivileged Controller transfer.
 for file in "${files[@]}"; do
   remote_parent="$(dirname -- "$remote_dir/$file")"
   ssh "$IMX6ULL_HOST" "mkdir -p '$remote_parent'"
