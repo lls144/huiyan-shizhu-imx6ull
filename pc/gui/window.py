@@ -11,7 +11,7 @@ from typing import Callable, Sequence
 
 import cv2
 import PySide6
-from PySide6.QtCore import Qt, QThread
+from PySide6.QtCore import Qt, QThread, QTimer
 from PySide6.QtGui import QColor, QCloseEvent, QImage, QKeyEvent, QPixmap, QResizeEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 from pc.events.config import EventConfig
 from pc.vision.config import VisionConfig
 from pc.vision.live import _git_state
+from pc.communication.state_monitor import BoardMonitorSnapshot, BoardStateMonitor, ConnectionStatus
 
 from .models import GuiSnapshot, GuiState, WorkerSummary
 from .sources import FrameSource
@@ -96,6 +97,7 @@ class MainWindow(QMainWindow):
         evidence_root: Path,
         expected_labels: Sequence[str],
         analyzer: Analyzer,
+        board_monitor: BoardStateMonitor | None = None,
     ) -> None:
         super().__init__()
         load_ui_fonts()
@@ -107,6 +109,8 @@ class MainWindow(QMainWindow):
         self.evidence_root = evidence_root
         self.expected_labels = tuple(expected_labels)
         self.analyzer = analyzer
+        self._board_monitor = board_monitor
+        self._board_timer: QTimer | None = None
         self._thread: QThread | None = None
         self._worker: VisionWorker | None = None
         self._buffer: LatestSnapshotBuffer | None = None
@@ -125,6 +129,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(960, 600)
         self.resize(1366, 768)
         self._set_state(GuiState.IDLE)
+        self._start_board_monitor()
 
     def _build_ui(self) -> None:
         root = QWidget()
@@ -249,6 +254,37 @@ class MainWindow(QMainWindow):
         layout.addWidget(header)
         layout.addWidget(_divider())
 
+        board = QWidget()
+        board_grid = QGridLayout(board)
+        board_grid.setContentsMargins(0, 0, 0, 0)
+        board_grid.setHorizontalSpacing(10)
+        board_grid.setVerticalSpacing(4)
+        self.camera_connection_value = self._board_value("OFFLINE")
+        self.board_connection_value = self._board_value("CONNECTING")
+        self.controller_connection_value = self._board_value("CONNECTING")
+        self.fifo_value = self._board_value("—/3")
+        self.station_value = self._board_value("—")
+        self.current_object_value = self._board_value("—")
+        self.last_key_value = self._board_value("—")
+        self.last_sort_value = self._board_value("—")
+        rows = (
+            ("CAMERA", self.camera_connection_value),
+            ("BOARD", self.board_connection_value),
+            ("CONTROLLER", self.controller_connection_value),
+            ("FIFO", self.fifo_value),
+            ("STATION", self.station_value),
+            ("CURRENT OBJECT", self.current_object_value),
+            ("LAST KEY", self.last_key_value),
+            ("LAST SORT", self.last_sort_value),
+        )
+        for row, (key_text, value) in enumerate(rows):
+            key = QLabel(key_text)
+            key.setObjectName("metadataKey")
+            board_grid.addWidget(key, row, 0)
+            board_grid.addWidget(value, row, 1)
+        layout.addWidget(_section("Board state", board))
+        layout.addWidget(_divider())
+
         session = QWidget()
         grid = QGridLayout(session)
         grid.setContentsMargins(0, 0, 0, 0)
@@ -279,6 +315,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(_section("Events", self.event_list), 1)
         return inspector
 
+    @staticmethod
+    def _board_value(text: str) -> QLabel:
+        value = QLabel(text)
+        value.setObjectName("boardStateValue")
+        return value
+
     def _build_status_bar(self) -> None:
         bar = QStatusBar()
         bar.setObjectName("statusBar")
@@ -291,6 +333,8 @@ class MainWindow(QMainWindow):
         self.status_roi = QLabel("ROI —")
         self.status_preprocess = QLabel("PIPELINE —")
         self.status_state = QLabel("IDLE")
+        self.status_camera_connection = QLabel("CAMERA OFFLINE")
+        self.status_board_connection = QLabel("BOARD CONNECTING")
         self.status_source.setObjectName("statusSource")
         self.status_state.setObjectName("statusState")
         for widget in (
@@ -310,6 +354,8 @@ class MainWindow(QMainWindow):
             self.status_preprocess,
         ):
             bar.addWidget(widget)
+        bar.addPermanentWidget(self.status_camera_connection)
+        bar.addPermanentWidget(self.status_board_connection)
         bar.addPermanentWidget(self.status_state)
         self.metrics: dict[str, QLabel] = {
             "source": self.status_source,
@@ -345,6 +391,54 @@ class MainWindow(QMainWindow):
         camera_running = self.source_type == "camera" and state == GuiState.RUNNING
         for button in self.scenario_buttons:
             button.setEnabled(camera_running)
+        self._set_camera_connection("ONLINE" if camera_running else "OFFLINE")
+
+    def _start_board_monitor(self) -> None:
+        if self._board_monitor is None:
+            self._apply_board_snapshot(
+                BoardMonitorSnapshot(ConnectionStatus.OFFLINE, None, "Board monitor is not configured")
+            )
+            return
+        self._apply_board_snapshot(self._board_monitor.start())
+        self._board_timer = QTimer(self)
+        self._board_timer.setInterval(50)
+        self._board_timer.timeout.connect(self._poll_board_monitor)
+        self._board_timer.start()
+
+    def _poll_board_monitor(self) -> None:
+        if self._board_monitor is None:
+            return
+        snapshot = self._board_monitor.poll()
+        if snapshot is not None:
+            self._apply_board_snapshot(snapshot)
+
+    def _set_camera_connection(self, status: str) -> None:
+        self.camera_connection_value.setText(status)
+        self.status_camera_connection.setText(f"CAMERA {status}")
+        _set_dynamic_property(self.camera_connection_value, "connection", status.lower())
+
+    def _apply_board_snapshot(self, snapshot: BoardMonitorSnapshot) -> None:
+        connection = snapshot.connection.value.upper()
+        self.board_connection_value.setText(connection)
+        self.controller_connection_value.setText(connection)
+        self.status_board_connection.setText(f"BOARD {connection}")
+        for value in (self.board_connection_value, self.controller_connection_value):
+            _set_dynamic_property(value, "connection", snapshot.connection.value)
+        pipeline = snapshot.pipeline
+        if pipeline is None:
+            self.fifo_value.setText("—/3")
+            self.station_value.setText("—")
+            self.current_object_value.setText("—")
+            self.last_key_value.setText("—")
+            self.last_sort_value.setText("—")
+        else:
+            self.fifo_value.setText(f"{pipeline.queue_length}/{pipeline.capacity}")
+            self.station_value.setText(pipeline.display_station)
+            self.current_object_value.setText((pipeline.current_object or "none").upper())
+            self.last_key_value.setText(pipeline.last_key or "none")
+            self.last_sort_value.setText(pipeline.last_sort or "none")
+        if snapshot.error:
+            self.statusBar().showMessage(f"Board monitor: {snapshot.error}", 3000)
 
     def start_session(self) -> None:
         if self.is_running:
@@ -541,4 +635,8 @@ class MainWindow(QMainWindow):
             _set_dynamic_property(self.error_value, "hasError", True)
             event.ignore()
             return
+        if self._board_timer is not None:
+            self._board_timer.stop()
+        if self._board_monitor is not None:
+            self._board_monitor.close()
         event.accept()

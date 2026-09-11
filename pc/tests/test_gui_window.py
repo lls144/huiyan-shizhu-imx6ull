@@ -132,6 +132,10 @@ def test_desktop_workspace_hierarchy_is_compact(qt_app: QApplication, tmp_path: 
     assert window.start_button.height() <= 30
     assert window.stop_button.height() <= 30
     assert not window.findChildren(QFrame, "card")
+    assert window.camera_connection_value.text() == "OFFLINE"
+    assert window.board_connection_value.text() == "OFFLINE"
+    assert window.controller_connection_value.text() == "OFFLINE"
+    assert window.fifo_value.text() == "—/3"
 
     window.resize(1920, 1080)
     qt_app.processEvents()

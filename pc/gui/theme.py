@@ -126,6 +126,10 @@ QLabel#metadataKey {{ color: {tokens.muted_text}; font-size: 11px; }}
 QLabel#metadataValue {{ color: {tokens.text}; font-size: 11px; }}
 QLabel#errorValue {{ color: {tokens.muted_text}; font-size: 11px; }}
 QLabel#errorValue[hasError="true"] {{ color: {tokens.error}; }}
+QLabel#boardStateValue {{ color: {tokens.text}; font-size: 11px; font-family: "Consolas", "Microsoft YaHei UI"; }}
+QLabel#boardStateValue[connection="online"] {{ color: {tokens.success}; }}
+QLabel#boardStateValue[connection="connecting"] {{ color: {tokens.warning}; }}
+QLabel#boardStateValue[connection="offline"] {{ color: {tokens.error}; }}
 QFrame#divider {{ color: {tokens.divider}; background: {tokens.divider}; max-height: 1px; }}
 QToolButton {{
     min-height: {tokens.tool_height}px;
