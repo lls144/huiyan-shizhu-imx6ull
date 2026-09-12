@@ -1,12 +1,19 @@
 # 正式演示 Runbook
 
-正常演示不需要 Ubuntu 终端或 SSH。
+正常演示不需要 Ubuntu 终端、SSH、Python 或虚拟环境。
+
+## Windows 演示包启动
+
+1. 解压 `HuiyanDemo-current-win64.zip`，保留其中完整的 `HuiyanDemo` 文件夹；不要只复制 `HuiyanDemo.exe`。
+2. 双击 `HuiyanDemo\HuiyanDemo.exe`，或双击桌面的“慧眼识珠”快捷方式。
+3. 程序会立刻显示窗口，然后后台检查 Camera、Ethernet、Controller TCP 与 heartbeat。Camera、BOARD、CONTROLLER 分别显示 `CONNECTING`、`ONLINE` 或 `OFFLINE`；任一设备暂时不可用时窗口仍保持可用并自动重连。
+4. 程序日志位于演示程序目录的 `logs\huiyan-demo.log`。排查时可将该文件一并提供给开发人员。
 
 ## 演示前
 
 1. 给 i.MX6ULL 上电，连接其指定 RJ45 演示口与 Windows Ethernet NIC。
 2. 将 Ace Pro 2 以 USB Webcam 模式接到 Windows，确认使用 MJPG 1920×1080@30。
-3. Windows 双击最终演示程序。程序读取 `pc/config/controller_windows_ethernet.json`，自动检查 camera 和 Controller。
+3. Windows 双击最终演示程序。程序读取其内置的 Windows RJ45 profile，自动检查 camera 和 Controller。
 4. GUI 显示 Camera、Board、Controller 正常后开始；LCD 应显示 HUIYAN HMI。
 
 ## 三类演示
@@ -18,6 +25,10 @@
 5. FIFO 非空时在 LCD 点击 RESET，确认 FIFO 0/3、IDLE、RGB off。
 
 ## 开发与故障恢复（非正常演示）
+
+- 开发启动：在仓库根目录双击 `scripts\start_demo.bat`，或运行 `& .\.venv\Scripts\python.exe -m pc.gui --source camera --roi-mode fixed_normalized`。
+- 构建 Windows 包：`powershell -ExecutionPolicy Bypass -File .\tools\windows\build_demo.ps1`；输出为 `dist\HuiyanDemo\HuiyanDemo.exe`。
+- 创建当前构建的桌面快捷方式：`powershell -ExecutionPolicy Bypass -File .\tools\windows\create_demo_shortcut.ps1`。
 
 - Ubuntu maintenance SSH 使用 USB Gadget 后门：`ssh imx6ull`。
 - 板端只读健康检查：`cd /home/debian/huiyan-shizhu && ./device/imx6ull/scripts/final_smoke_check.sh`。

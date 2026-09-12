@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import platform
 from collections import deque
 from dataclasses import asdict
@@ -32,11 +33,11 @@ from PySide6.QtWidgets import (
 
 from pc.events.config import EventConfig
 from pc.vision.config import VisionConfig
-from pc.vision.live import _git_state
 from pc.communication.state_monitor import BoardMonitorSnapshot, BoardStateMonitor, ConnectionStatus
 from pc.communication.vision_dispatcher import EnqueueResult, VisionEventDispatcher
 
 from .models import GuiSnapshot, GuiState, WorkerSummary
+from .runtime import LOGGER_NAME, runtime_git_state
 from .digital_twin import DigitalSortingLine
 from .sources import FrameSource
 from .theme import APP_STYLE, THEME, load_ui_fonts
@@ -495,6 +496,15 @@ class MainWindow(QMainWindow):
             f"Vision event #{result.event_id} · {result.outcome}: {result.message}",
             5000,
         )
+        if result.outcome != "accepted":
+            logging.getLogger(LOGGER_NAME).warning(
+                "enqueue failed event=%s object=%s shape=%s outcome=%s message=%s",
+                result.event_id,
+                result.object_id,
+                result.shape,
+                result.outcome,
+                result.message,
+            )
 
     def start_session(self) -> None:
         if self.is_running:
@@ -629,7 +639,7 @@ class MainWindow(QMainWindow):
                 "acceptance_status": "synthetic_offline_observation"
                 if summary.source_type == "synthetic"
                 else "pending_user_validation",
-                "git": _git_state(),
+                "git": runtime_git_state(),
                 "environment": {
                     "platform": platform.platform(),
                     "python": platform.python_version(),
@@ -654,6 +664,7 @@ class MainWindow(QMainWindow):
         path = self.session_dir / f"session-{safe_timestamp}.json"
         path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if summary.error:
+            logging.getLogger(LOGGER_NAME).error("vision session failed: %s", summary.error)
             self.error_value.setText(summary.error)
             _set_dynamic_property(self.error_value, "hasError", True)
             if self._last_image is None:

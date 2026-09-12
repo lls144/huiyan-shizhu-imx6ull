@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 import time
@@ -18,18 +19,19 @@ from pc.vision.config import load_vision_config
 from pc.vision.pipeline import analyze_multiple_objects
 
 from .reporting import write_csv_record, write_json_record
+from .runtime import LOGGER_NAME, configure_runtime_logging, resource_path, writable_runtime_dir
 from .sources import CameraFrameSource, SyntheticFrameSource
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=("synthetic", "camera"), default="synthetic")
-    parser.add_argument("--vision-config", type=Path, default=Path("pc/config/vision.json"))
-    parser.add_argument("--event-config", type=Path, default=Path("pc/config/events.json"))
+    parser.add_argument("--vision-config", type=Path, default=resource_path("pc/config/vision.json"))
+    parser.add_argument("--event-config", type=Path, default=resource_path("pc/config/events.json"))
     parser.add_argument(
         "--controller-config",
         type=Path,
-        default=Path("pc/config/controller_windows_ethernet.json"),
+        default=resource_path("pc/config/controller_windows_ethernet.json"),
         help="Windows RJ45 Controller profile used by the Board State monitor",
     )
     parser.add_argument(
@@ -37,20 +39,22 @@ def _parser() -> argparse.ArgumentParser:
         type=int,
         help="optional positive start ID for this Camera-to-Controller GUI session",
     )
-    parser.add_argument("--camera-config", type=Path, default=Path("pc/config/camera.json"))
+    parser.add_argument("--camera-config", type=Path, default=resource_path("pc/config/camera.json"))
     parser.add_argument(
         "--roi-mode", choices=("auto", "manual", "fixed_normalized"), default="auto"
     )
     parser.add_argument(
-        "--calibration-file", type=Path, default=Path("output/m5/runtime-calibration.json")
+        "--calibration-file", type=Path, default=writable_runtime_dir() / "output/m5/runtime-calibration.json"
     )
     parser.add_argument("--reuse-calibration", action="store_true")
-    parser.add_argument("--dataset-root", type=Path, default=Path("test_data/m3/synthetic"))
+    parser.add_argument("--dataset-root", type=Path, default=resource_path("test_data/m3/synthetic"))
     parser.add_argument("--synthetic-fps", type=float, default=20.0)
     parser.add_argument("--frames-per-scene", type=int, default=20)
     parser.add_argument("--no-loop", action="store_true")
-    parser.add_argument("--session-dir", type=Path, default=Path("output/m5/sessions"))
-    parser.add_argument("--m3-evidence-dir", type=Path, default=Path("output/m3/live-evidence"))
+    parser.add_argument("--session-dir", type=Path, default=writable_runtime_dir() / "output/m5/sessions")
+    parser.add_argument(
+        "--m3-evidence-dir", type=Path, default=writable_runtime_dir() / "output/m3/live-evidence"
+    )
     parser.add_argument(
         "--expected-labels",
         nargs="*",
@@ -68,10 +72,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def run(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    logging.getLogger(LOGGER_NAME).info(
+        "startup source=%s frozen=%s", args.source, bool(getattr(sys, "frozen", False))
+    )
     if args.offscreen:
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
     from PySide6.QtCore import QTimer
+    from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QApplication
 
     from .window import MainWindow
@@ -121,6 +129,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         )
 
     app = QApplication.instance() or QApplication([sys.argv[0]])
+    app.setWindowIcon(QIcon(str(resource_path("pc/gui/assets/huiyan_logo.ico"))))
     window = MainWindow(
         source_factory=source_factory,
         source_type=args.source,
@@ -133,6 +142,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         board_monitor=board_monitor,
         event_dispatcher=event_dispatcher,
     )
+    window.setWindowIcon(app.windowIcon())
     window.show()
     if not args.no_auto_start:
         QTimer.singleShot(0, window.start_session)
@@ -174,5 +184,11 @@ def run(argv: Sequence[str] | None = None) -> int:
     return exit_code
 
 
-def main() -> int:
-    return run()
+def main(argv: Sequence[str] | None = None) -> int:
+    configure_runtime_logging()
+    logger = logging.getLogger(LOGGER_NAME)
+    try:
+        return run(argv)
+    except Exception:
+        logger.exception("fatal application exception")
+        return 1

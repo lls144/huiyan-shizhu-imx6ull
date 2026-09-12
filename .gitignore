@@ -19,6 +19,7 @@ htmlcov/
 # Build and packaging outputs
 build/
 dist/
+release/*.zip
 *.egg-info/
 
 # OS and temporary files
