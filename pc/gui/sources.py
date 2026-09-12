@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import logging
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -22,6 +23,8 @@ from pc.vision.roi import (
     save_runtime_calibration,
     select_manual_roi,
 )
+
+from .runtime import LOGGER_NAME
 
 
 class FrameSource(Protocol):
@@ -155,6 +158,16 @@ class CameraFrameSource:
         self._consecutive_failures = 0
 
     def open(self) -> None:
+        logger = logging.getLogger(LOGGER_NAME)
+        logger.info("camera opening config=%s", self.camera_config_path)
+        try:
+            self._open()
+            logger.info("camera open success device=%s", self.live_camera.device.name)
+        except Exception:
+            logger.exception("camera open failed")
+            raise
+
+    def _open(self) -> None:
         self.live_camera = open_live_camera(self.camera_config_path)
         first_frame: Image | None = None
         for _ in range(self.live_camera.config.warmup_frames + 1):

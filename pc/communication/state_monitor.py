@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from concurrent.futures import Future
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Callable, Mapping, Protocol
+
+
+LOGGER = logging.getLogger("huiyan.demo")
 
 
 class _ControllerClientLike(Protocol):
@@ -262,9 +266,11 @@ class BoardStateMonitor:
         try:
             return _PendingRequest(request(), now + self._request_timeout)
         except Exception as error:
-            self._error = f"{label} request failed: {type(error).__name__}: {error}"
+            message = f"{label} request failed: {type(error).__name__}: {error}"
             if label == "heartbeat":
-                self._connection = ConnectionStatus.OFFLINE
+                self._set_heartbeat_status(ConnectionStatus.OFFLINE, message)
+            else:
+                self._error = message
             return None
 
     def _collect_heartbeat(self, now: float) -> bool:
@@ -276,23 +282,33 @@ class BoardStateMonitor:
         self._heartbeat = None
         if not pending.future.done():
             pending.future.cancel()
-            self._connection = ConnectionStatus.OFFLINE
-            self._error = "heartbeat timed out"
+            self._set_heartbeat_status(ConnectionStatus.OFFLINE, "heartbeat timed out")
             return True
         try:
             response = pending.future.result()
         except Exception as error:
-            self._connection = ConnectionStatus.OFFLINE
-            self._error = f"heartbeat failed: {type(error).__name__}: {error}"
+            self._set_heartbeat_status(
+                ConnectionStatus.OFFLINE, f"heartbeat failed: {type(error).__name__}: {error}"
+            )
             return True
         if not isinstance(response, Mapping) or response.get("type") != "ack" or response.get("status") != "alive":
-            self._connection = ConnectionStatus.OFFLINE
-            self._error = f"invalid heartbeat response: {response!r}"
+            self._set_heartbeat_status(
+                ConnectionStatus.OFFLINE, f"invalid heartbeat response: {response!r}"
+            )
             return True
         changed = self._connection is not ConnectionStatus.ONLINE or self._error is not None
-        self._connection = ConnectionStatus.ONLINE
-        self._error = None
+        self._set_heartbeat_status(ConnectionStatus.ONLINE, None)
         return changed
+
+    def _set_heartbeat_status(self, status: ConnectionStatus, error: str | None) -> None:
+        previous = self._connection
+        self._connection = status
+        self._error = error
+        if previous is not status:
+            if error is None:
+                LOGGER.info("heartbeat status %s", status.value)
+            else:
+                LOGGER.warning("heartbeat status %s: %s", status.value, error)
 
     def _collect_state(self, now: float) -> bool:
         pending = self._state
