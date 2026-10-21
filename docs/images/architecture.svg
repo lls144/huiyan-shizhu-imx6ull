@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 240" role="img" aria-labelledby="t"><title id="t">System architecture</title><defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0 0L7 3L0 6" fill="none" stroke="#65786B"/></marker></defs><rect width="840" height="240" rx="8" fill="#F6F8F5"/>
+<path d="M240 64L314 64" fill="none" stroke="#65786B" stroke-width="2" marker-end="url(#a)"/>
+<text x="277.0" y="55.0" text-anchor="middle" fill="#42594B" font-family="sans-serif" font-size="13">TCP</text>
+<path d="M600 64L526 64" fill="none" stroke="#65786B" stroke-width="2" marker-end="url(#a)"/>
+<path d="M420 97L420 153" fill="none" stroke="#65786B" stroke-width="2" marker-end="url(#a)"/>
+<text x="420.0" y="116.0" text-anchor="middle" fill="#42594B" font-family="sans-serif" font-size="13">state / Reset</text>
+<path d="M526 80L600 166" fill="none" stroke="#65786B" stroke-width="2" marker-end="url(#a)"/>
+<text x="563.0" y="114.0" text-anchor="middle" fill="#42594B" font-family="sans-serif" font-size="13">branch</text>
+<rect x="28" y="32" width="212" height="65" rx="4" fill="#fff" stroke="#A8B8AD"/><text x="43" y="59" fill="#14201C" font-family="sans-serif" font-size="19" font-weight="600">Windows / OpenCV</text><text x="43" y="81" fill="#52645A" font-family="sans-serif" font-size="14">target lifecycle</text>
+<rect x="314" y="32" width="212" height="65" rx="4" fill="#fff" stroke="#A8B8AD"/><text x="329" y="59" fill="#14201C" font-family="sans-serif" font-size="19" font-weight="600">Controller / FIFO 3</text><text x="329" y="81" fill="#52645A" font-family="sans-serif" font-size="14">TCP JSON Lines · FSM</text>
+<rect x="600" y="32" width="212" height="65" rx="4" fill="#fff" stroke="#A8B8AD"/><text x="615" y="59" fill="#14201C" font-family="sans-serif" font-size="19" font-weight="600">KEY1 / KEY2 / KEY3</text><text x="615" y="81" fill="#52645A" font-family="sans-serif" font-size="14">Linux input</text>
+<rect x="314" y="153" width="212" height="65" rx="4" fill="#fff" stroke="#A8B8AD"/><text x="329" y="180" fill="#14201C" font-family="sans-serif" font-size="19" font-weight="600">800 × 480 HMI</text><text x="329" y="202" fill="#52645A" font-family="sans-serif" font-size="14">Goodix touch · Reset</text>
+<rect x="600" y="153" width="212" height="65" rx="4" fill="#fff" stroke="#A8B8AD"/><text x="615" y="180" fill="#14201C" font-family="sans-serif" font-size="19" font-weight="600">RGB LED helper</text><text x="615" y="202" fill="#52645A" font-family="sans-serif" font-size="14">restricted Unix socket</text>
+</svg>

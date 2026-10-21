@@ -1,0 +1,26 @@
+[
+  {
+    "file": "lcd-hmi.jpg",
+    "source_sha256": "00c9fde1484e20f065067ef131498cac7f7ab3a962fc8b81a050dcee81fc7788",
+    "public_sha256": "7d88135d485fdfc666fefd1905efab3f14c70eca734d5008c645e2839bad183a",
+    "processing": "JPEG re-encode; metadata removed; no content synthesis"
+  },
+  {
+    "file": "reset-before.jpg",
+    "source_sha256": "5cf1780ed27862fc6ae9d1465660ef07542729b74d709676617b15a90c7a653b",
+    "public_sha256": "17d481ea4ad52f8789556f72833416965528d4df71cefd3d24480ea420ea5b14",
+    "processing": "JPEG re-encode; metadata removed; no content synthesis"
+  },
+  {
+    "file": "reset-after.jpg",
+    "source_sha256": "5bac0f08ccd470d6bfa686b35011288b160b30dbc6cf7580b2252ebd7ae758d2",
+    "public_sha256": "8ef640c9ec84dcfc49e1386f1ef1406bac695429f378b89b6c98ae39a5c40f5c",
+    "processing": "JPEG re-encode; metadata removed; no content synthesis"
+  },
+  {
+    "file": "m17-session.json",
+    "source_sha256": "3a593eb0c23902e415f1be65dbc0499d7864893b06800bda27b0de2f9727e899",
+    "public_sha256": "0f42035e295c320b5a1f2c660e0a6d732411d6c30b4839ef923cd073c8fcb463",
+    "processing": "Identifiers and local paths redacted; measurements unchanged"
+  }
+]

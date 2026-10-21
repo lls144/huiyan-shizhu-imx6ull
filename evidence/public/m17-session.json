@@ -1,0 +1,316 @@
+{
+  "started_at": "2026-09-11T21:06:24.184+08:00",
+  "finished_at": "2026-09-11T21:10:24.812+08:00",
+  "duration_seconds": 240.551791,
+  "source_type": "camera",
+  "source_metadata": {
+    "source_type": "camera",
+    "camera_config_path": "pc\\config\\camera.json",
+    "device": {
+      "index": 0,
+      "name": "Insta360 Ace Pro 2",
+      "path": "<device-instance-redacted>",
+      "vid": 11802,
+      "pid": 4099,
+      "backend_name": "DSHOW",
+      "backend_id": 700
+    },
+    "camera_config": {
+      "device_name": "Insta360 Ace Pro 2",
+      "fallback_index": null,
+      "backend": "DSHOW",
+      "requested_width": 1920,
+      "requested_height": 1080,
+      "requested_fps": 30.0,
+      "fourcc": "MJPG",
+      "warmup_frames": 15,
+      "test_duration_seconds": 60.0,
+      "reopen_cycles": 3,
+      "minimum_read_success_rate": 0.99,
+      "maximum_frame_gap_seconds": 2.0,
+      "device_path": null
+    },
+    "actual_properties": {
+      "width": 1920.0,
+      "height": 1080.0,
+      "reported_fps": 30.00003000003,
+      "backend": "DSHOW"
+    },
+    "calibration": {
+      "requested_mode": "fixed_normalized",
+      "selected_mode": "fixed_normalized",
+      "source": "configured",
+      "normalized_roi": {
+        "left": 0.24,
+        "top": 0.08,
+        "right": 0.76,
+        "bottom": 0.75
+      },
+      "pixel_roi": [
+        461,
+        86,
+        1459,
+        810
+      ],
+      "fallback_messages": [],
+      "auto_score": null
+    }
+  },
+  "frames_read": 7034,
+  "frames_processed": 7034,
+  "detection_count": 6563,
+  "event_count": 3,
+  "processing_fps": 29.241104,
+  "average_processing_ms": 6.569705,
+  "p95_processing_ms": 8.3694,
+  "failed_reads": 0,
+  "error": null,
+  "ended_reason": "stopped",
+  "worker_clean_shutdown": true,
+  "events": [
+    {
+      "event_id": 1,
+      "event_type": "OBJECT_ENTER",
+      "object_id": 1,
+      "label": "circle",
+      "confidence": 0.973657,
+      "frame_index": 186
+    },
+    {
+      "event_id": 2,
+      "event_type": "OBJECT_EXIT",
+      "object_id": 1,
+      "label": "circle",
+      "confidence": 0.976171,
+      "frame_index": 372
+    },
+    {
+      "event_id": 3,
+      "event_type": "OBJECT_ENTER",
+      "object_id": 2,
+      "label": "circle",
+      "confidence": 0.977131,
+      "frame_index": 600
+    }
+  ],
+  "final_object_states": [
+    {
+      "object_id": 1,
+      "label": "circle",
+      "bbox": [
+        779,
+        271,
+        225,
+        218
+      ],
+      "first_seen": 185,
+      "last_seen": 346,
+      "hit_count": 138,
+      "consecutive_hits": 0,
+      "miss_count": 26,
+      "confirmed": true,
+      "active": false,
+      "event_emitted": true,
+      "status": "exited",
+      "confidence": 0.976171
+    },
+    {
+      "object_id": 2,
+      "label": "circle",
+      "bbox": [
+        827,
+        268,
+        225,
+        219
+      ],
+      "first_seen": 599,
+      "last_seen": 7033,
+      "hit_count": 6425,
+      "consecutive_hits": 1711,
+      "miss_count": 0,
+      "confirmed": true,
+      "active": true,
+      "event_emitted": true,
+      "status": "confirmed",
+      "confidence": 0.978781
+    }
+  ],
+  "evidence_records": [],
+  "schema_version": 1,
+  "milestone": "M5",
+  "acceptance_status": "pending_user_validation",
+  "git": {
+    "commit": "9f9e51aff48c0ce71645971b53f0ff963a957438",
+    "dirty": true
+  },
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "pyside6": "6.11.2"
+  },
+  "vision_config": {
+    "roi_left": 0.24,
+    "roi_top": 0.08,
+    "roi_right": 0.76,
+    "roi_bottom": 0.75,
+    "gaussian_kernel_size": 5,
+    "morphology_kernel_size": 3,
+    "morphology_open_iterations": 1,
+    "canny_low_threshold": 50,
+    "canny_high_threshold": 150,
+    "min_area_ratio": 0.02,
+    "max_area_ratio": 0.25,
+    "min_solidity": 0.9,
+    "border_margin_pixels": 2,
+    "approx_epsilon_ratio": 0.02,
+    "rectangle_max_angle_deviation_degrees": 25.0,
+    "rectangle_min_fill_ratio": 0.8,
+    "circle_min_vertices": 6,
+    "circle_min_circularity": 0.78,
+    "circle_min_aspect_ratio": 0.8,
+    "triangle_confidence_good_circularity": 0.62,
+    "triangle_confidence_max_circularity": 0.72,
+    "rectangle_confidence_good_angle_deviation_degrees": 5.0,
+    "rectangle_confidence_good_fill_ratio": 0.95,
+    "circle_confidence_good_vertices": 8,
+    "circle_confidence_good_circularity": 0.92,
+    "circle_confidence_good_aspect_ratio": 0.95,
+    "confidence_good_solidity": 0.98,
+    "confidence_good_area_clearance_ratio": 0.03,
+    "confidence_topology_weight": 0.5,
+    "confidence_geometry_weight": 0.3,
+    "confidence_quality_weight": 0.2,
+    "auto_hsv_min_value": 140,
+    "auto_hsv_max_saturation": 100,
+    "auto_morphology_kernel_size": 11,
+    "auto_morphology_close_iterations": 2,
+    "auto_morphology_open_iterations": 1,
+    "auto_min_area_ratio": 0.12,
+    "auto_max_area_ratio": 0.85,
+    "auto_preferred_area_ratio": 0.35,
+    "auto_min_rectangularity": 0.7,
+    "auto_max_center_distance_ratio": 0.5,
+    "auto_min_bright_fraction": 0.6,
+    "auto_approx_epsilon_ratio": 0.03,
+    "auto_inner_margin_ratio": 0.04,
+    "auto_min_score": 0.45,
+    "auto_score_area_weight": 0.2,
+    "auto_score_rectangularity_weight": 0.3,
+    "auto_score_center_weight": 0.25,
+    "auto_score_brightness_weight": 0.25,
+    "manual_min_width_pixels": 80,
+    "manual_min_height_pixels": 80,
+    "stability_window_size": 5,
+    "stability_min_votes": 3,
+    "fps_smoothing_window": 30,
+    "live_max_consecutive_read_failures": 30,
+    "live_preview_width": 1280,
+    "live_preview_height": 720,
+    "preprocess_mode": "otsu",
+    "comparison_preprocess_mode": "clahe_otsu",
+    "clahe_clip_limit": 2.0,
+    "clahe_tile_grid_size": 8
+  },
+  "event_config": {
+    "min_confirm_frames": 2,
+    "max_missing_frames": 3,
+    "occlusion_grace_frames": 25,
+    "iou_threshold": 0.3,
+    "center_distance_threshold": 80.0
+  },
+  "gui_updates": 7019,
+  "gui_update_fps": 29.178748,
+  "display_frames_dropped": 15,
+  "buffer_overwrites": 15,
+  "clean_shutdown": true,
+  "controller_enqueues": [
+    {
+      "event_id": 1,
+      "object_id": 1,
+      "shape": "circle",
+      "outcome": "accepted",
+      "message": "Controller ACK accepted; authoritative FIFO will update from pipeline_state",
+      "command_id": 200000,
+      "response": {
+        "version": 1,
+        "type": "ack",
+        "request_id": "078d4cab-bc44-4f26-9c61-9bba2bdedeb9",
+        "command_id": 200000,
+        "status": "accepted",
+        "pipeline_state": {
+          "station": "Station1",
+          "queue_length": 1,
+          "capacity": 3,
+          "empty": false,
+          "full": false,
+          "front": {
+            "command_id": 200000,
+            "shape": "circle",
+            "source_event_id": 1,
+            "source_object_id": 1
+          },
+          "queue": [
+            {
+              "command_id": 200000,
+              "shape": "circle",
+              "source_event_id": 1,
+              "source_object_id": 1
+            }
+          ],
+          "last_key": null,
+          "last_transition": "waiting",
+          "last_sort": null
+        }
+      }
+    },
+    {
+      "event_id": 3,
+      "object_id": 2,
+      "shape": "circle",
+      "outcome": "accepted",
+      "message": "Controller ACK accepted; authoritative FIFO will update from pipeline_state",
+      "command_id": 200002,
+      "response": {
+        "version": 1,
+        "type": "ack",
+        "request_id": "47954125-4d6a-4367-b7d7-016077c8a982",
+        "command_id": 200002,
+        "status": "accepted",
+        "pipeline_state": {
+          "station": "Station1",
+          "queue_length": 2,
+          "capacity": 3,
+          "empty": false,
+          "full": false,
+          "front": {
+            "command_id": 200000,
+            "shape": "circle",
+            "source_event_id": 1,
+            "source_object_id": 1
+          },
+          "queue": [
+            {
+              "command_id": 200000,
+              "shape": "circle",
+              "source_event_id": 1,
+              "source_object_id": 1
+            },
+            {
+              "command_id": 200002,
+              "shape": "circle",
+              "source_event_id": 3,
+              "source_object_id": 2
+            }
+          ],
+          "last_key": null,
+          "last_transition": "waiting",
+          "last_sort": null
+        }
+      }
+    }
+  ],
+  "requested_soak_seconds": 240.0,
+  "python_traced_current_bytes": 25389183,
+  "python_traced_peak_bytes": 31615722,
+  "screenshot": "output\\m17-camera-occlusion-rerun.png"
+}
