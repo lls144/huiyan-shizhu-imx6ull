@@ -1,8 +1,8 @@
-# 慧眼识珠 · i.MX6ULL 控制器与 HMI
+# 基于 i.MX6ULL 的嵌入式分拣控制与 HMI 系统
 
 PC 识别物料，i.MX6ULL 管理容量为 3 的 FIFO 与三工位状态机。实体 KEY1/2/3 推进队首，RGB LED 表示分流结果，800×480 LCD 显示队列、工位和连接状态，并提供触摸 Reset。
 
-这是已结项的慧眼识珠综合实验的 Linux 实现。我负责视觉链路、控制器、HMI、接口规范、集成与真机验收；[视觉与 PLC 工程](https://github.com/lls144/huiyan-shizhu) 保留另一条团队协作的工业控制路线。视觉计算运行在 PC，板端承担控制与显示。
+这是已结项的视觉分拣综合实验的 Linux 实现。我负责视觉链路、控制器、HMI、接口规范、集成与真机验收；[视觉与 PLC 工程](https://github.com/lls144/huiyan-shizhu) 保留另一条团队协作的工业控制路线。视觉计算运行在 PC，板端承担控制与显示。
 
 ![系统架构](docs/images/architecture.svg)
 
